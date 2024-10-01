@@ -10,6 +10,19 @@ import {
   generateFluidkeyMessage,
 } from "@fluidkey/stealth-account-kit";
 
+/**
+ * End-to-end example of how to generate stealth Safe accounts based on the user's private key and the key generation message to be signed.
+ *
+ * @param userPrivateKey
+ * @param userPin
+ * @param userAddress
+ * @param viewingPrivateKeyNodeNumber
+ * @param startNonce
+ * @param endNonce
+ * @param chainId
+ * @returns two lists of objects containing the nonce, the corresponding stealth Safe address, and the private key controlling the stealth Safe at that address
+ */
+
 export async function generateStealthSafeAccount({
   userPrivateKey,
   userPin,
@@ -26,50 +39,61 @@ export async function generateStealthSafeAccount({
   startNonce?: bigint;
   endNonce?: bigint;
   chainId?: number;
-}) {
-  // Create results array
+}): Promise<
+  {
+    nonce: bigint;
+    stealthSafeAddress: `0x${string}`;
+    stealthPrivateKey: `0x${string}`;
+  }[][]
+> {
+  // Create an empty array to store the results
   const results: {
     nonce: bigint;
-    stealthSafeAddress: string;
-    stealthPrivateKey: string;
+    stealthSafeAddress: `0x${string}`;
+    stealthPrivateKey: `0x${string}`;
   }[][] = [[], []];
 
-  // Generate the signature for key derivation
+  // Generate the signature from which the private keys will be derived
   const account = privateKeyToAccount(userPrivateKey);
   const { message } = generateFluidkeyMessage({
     pin: userPin,
     address: userAddress,
   });
-  const signature = await account.signMessage({ message });
+  const signature = await account.signMessage({
+    message,
+  });
 
-  // Generate keys from signature
+  // Generate the private keys from the signature
   const { spendingPrivateKey, viewingPrivateKey } =
     generateKeysFromSignature(signature);
 
-  // Extract viewing private key node
+  // Extract the node required to generate the pseudo-random input for stealth address generation
   const privateViewingKeyNode = extractViewingPrivateKeyNode(
     viewingPrivateKey,
     viewingPrivateKeyNodeNumber
   );
 
-  // Get public spending key
+  // Get the spending public key
   const spendingAccount = privateKeyToAccount(spendingPrivateKey);
   const spendingPublicKey = spendingAccount.publicKey;
 
-  // Generate stealth addresses within the nonce range
+  // Loop through the nonce range and predict the stealth Safe address
   for (let nonce = startNonce; nonce <= endNonce; nonce++) {
+    // Generate the ephemeral private key
     const { ephemeralPrivateKey } = generateEphemeralPrivateKey({
       viewingPrivateKeyNode: privateViewingKeyNode,
       nonce,
       chainId,
     });
 
+    // Generate the stealth owner address
     const { stealthAddresses } = generateStealthAddresses({
       spendingPublicKeys: [spendingPublicKey],
       ephemeralPrivateKey,
     });
 
-    // Predict stealth Safe addresses using both client and bytecode
+    // Predict the corresponding stealth Safe address, both passing the client and using
+    // the CREATE2 option with bytecode, making sure the addresses generated are the same
     const { stealthSafeAddress: stealthSafeAddressWithClient } =
       await predictStealthSafeAddressWithClient({
         threshold: 1,
@@ -77,7 +101,6 @@ export async function generateStealthSafeAccount({
         safeVersion: "1.3.0",
         useDefaultAddress: true,
       });
-
     const { stealthSafeAddress: stealthSafeAddressWithBytecode } =
       predictStealthSafeAddressWithBytecode({
         threshold: 1,
@@ -88,13 +111,13 @@ export async function generateStealthSafeAccount({
         useDefaultAddress: true,
       });
 
-    // Generate stealth private key for the Safe
+    // Generate the stealth private spending key controlling the stealth Safe
     const { stealthPrivateKey } = generateStealthPrivateKey({
       spendingPrivateKey,
       ephemeralPublicKey: privateKeyToAccount(ephemeralPrivateKey).publicKey,
     });
 
-    // Store results
+    // Add the result to the results array
     results[0].push({
       nonce,
       stealthSafeAddress: stealthSafeAddressWithClient,
@@ -107,5 +130,6 @@ export async function generateStealthSafeAccount({
     });
   }
 
+  // Return the results
   return results;
 }
