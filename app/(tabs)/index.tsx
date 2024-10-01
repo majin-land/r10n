@@ -8,7 +8,7 @@ import { View, Text, Button, StyleSheet } from "react-native";
 import { generateStealthSafeAccount } from "@/libs/stealth";
 
 export default function App() {
-  const privateKey = process.env.EXPO_PUBLIC_PRIVATE_KEY;
+  const privateKey = process.env.EXPO_PUBLIC_PRIVATE_KEY || "";
   const address = process.env.EXPO_PUBLIC_ADDRESS || "";
 
   const [results, setResults] = useState<any>([]);
