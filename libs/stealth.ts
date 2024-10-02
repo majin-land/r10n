@@ -265,7 +265,7 @@ export async function generateStealthPrivate({
     ephemeralPublicKey,
   });
 
-  const stealthAccount = new ethers.Wallet(stealthPrivateKey);
+  const stealthAccount = privateKeyToAccount(stealthPrivateKey);
   const stealthAddress = stealthAccount.address;
 
   console.log(stealthAddress, "STEALTH ADDRESS AFTER GET EPHEMERAL");
