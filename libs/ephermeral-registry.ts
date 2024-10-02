@@ -1,7 +1,7 @@
-import { createWalletClient, createPublicClient, custom, http } from 'viem';
-import { sepolia } from 'viem/chains';
-import { privateKeyToAccount } from 'viem/accounts';
-import ERC6538RegistryABI from './abi/ERC6538RegistryABI'; // Your ABI
+import { createWalletClient, createPublicClient, custom, http } from 'viem'
+import { sepolia } from 'viem/chains'
+import { privateKeyToAccount } from 'viem/accounts'
+import ERC6538RegistryABI from './abi/ERC6538RegistryABI' 
 
 const client = createPublicClient({
   chain: sepolia,
