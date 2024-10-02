@@ -10,6 +10,13 @@ import {
   generateFluidkeyMessage,
 } from "@fluidkey/stealth-account-kit";
 
+import * as secp from "@noble/secp256k1";
+import * as ethers from "ethers";
+import { Hex, keccak256 as vKeccak256 } from "viem";
+import { keccak256 } from "js-sha3";
+
+import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
+
 /**
  * End-to-end example of how to generate stealth Safe accounts based on the user's private key and the key generation message to be signed.
  *
@@ -22,6 +29,11 @@ import {
  * @param chainId
  * @returns two lists of objects containing the nonce, the corresponding stealth Safe address, and the private key controlling the stealth Safe at that address
  */
+
+// function randomPrivateKey() {
+//   const randPrivateKey = secp.utils.randomPrivateKey();
+//   return `0x${Buffer.from(randPrivateKey).toString("hex")}`;
+// }
 
 export async function generateStealthSafeAccount({
   userPrivateKey,
@@ -132,4 +144,135 @@ export async function generateStealthSafeAccount({
 
   // Return the results
   return results;
+}
+
+export async function generateStealthMetaAddress({
+  userPrivateKey,
+  userPin,
+  userAddress,
+}: {
+  userPrivateKey: `0x${string}`;
+  userPin: string;
+  userAddress: string;
+}) {
+  // Generate the signature from which the private keys will be derived
+  const account = privateKeyToAccount(userPrivateKey);
+  const { message } = generateFluidkeyMessage({
+    pin: userPin,
+    address: userAddress,
+  });
+  const signature = await account.signMessage({
+    message,
+  });
+
+  // Generate the private keys from the signature
+  const { spendingPrivateKey, viewingPrivateKey } =
+    generateKeysFromSignature(signature);
+
+  // Get the spending public key
+  const spendingAccount = privateKeyToAccount(spendingPrivateKey);
+  const spendingPublicKey = spendingAccount.publicKey;
+  // Get the viewing public key
+  const viewingAccount = privateKeyToAccount(viewingPrivateKey);
+  const viewingPublicKey = viewingAccount.publicKey;
+
+  // Check that the public keys are valid
+  if (spendingPublicKey.length !== 132 || viewingPublicKey.length !== 132) {
+    throw new Error("Invalid public key length. Must be 130 hex characters.");
+  }
+
+  // Compress the spending and viewing public keys
+  const compressedSpendingPublicKey = compressPublicKey(spendingPublicKey);
+  const compressedViewingPublicKey = compressPublicKey(viewingPublicKey);
+
+  // Get the stealth meta address
+  const stealthMetaAddress =
+    "st:eth:0x" +
+    compressedSpendingPublicKey.slice(2) +
+    compressedViewingPublicKey.slice(2);
+
+  return {
+    spendingPrivateKey,
+    viewingPrivateKey,
+    spendingPublicKey,
+    viewingPublicKey,
+    stealthMetaAddress,
+  };
+}
+
+export async function generateStealthInfo(
+  stealthMetaAddress: `st:eth:0x${string}`
+) {
+  console.log(stealthMetaAddress);
+  if (!stealthMetaAddress.startsWith("st:eth:0x")) {
+    throw new Error(
+      "Wrong address format; Address must start with `st:eth:0x...`"
+    );
+  }
+
+  const spendPublicKey = ("0x" + stealthMetaAddress.slice(9, 75)) as Hex;
+  const viewPublicKey = ("0x" + stealthMetaAddress.slice(75)) as Hex;
+
+  // generate random ephemeral private key
+  const ephemeralPrivateKey = randomPrivateKey() as Hex;
+  console.log(ephemeralPrivateKey, "EPHEMERAL PRIVATE KEY");
+
+  // Generate the stealth owner address
+  const { stealthAddresses } = generateStealthAddresses({
+    spendingPublicKeys: [spendPublicKey],
+    ephemeralPrivateKey,
+  });
+
+  // generate ephemeral public key
+  const ephemeralAccount = privateKeyToAccount(ephemeralPrivateKey);
+  const ephemeralPublicKey = ephemeralAccount.publicKey;
+
+  return {
+    stealthMetaAddress,
+    stealthAddress: stealthAddresses,
+    ephemeralPublicKey,
+  };
+}
+
+export async function generateStealthPrivate({
+  userPrivateKey,
+  userPin,
+  userAddress,
+  ephemeralPublicKey,
+}: {
+  userPrivateKey: `0x${string}`;
+  userPin: string;
+  userAddress: string;
+  ephemeralPublicKey: `0x${string}`;
+}) {
+  // Generate the signature from which the private keys will be derived
+  const account = privateKeyToAccount(userPrivateKey);
+  const { message } = generateFluidkeyMessage({
+    pin: userPin,
+    address: userAddress,
+  });
+  const signature = await account.signMessage({
+    message,
+  });
+
+  // Generate the private keys from the signature
+  const { spendingPrivateKey, viewingPrivateKey } =
+    generateKeysFromSignature(signature);
+
+  // Generate stealth private key from ephemeral public key
+  const { stealthPrivateKey } = generateStealthPrivateKey({
+    spendingPrivateKey,
+    ephemeralPublicKey,
+  });
+
+  const stealthAccount = new ethers.Wallet(stealthPrivateKey);
+  const stealthAddress = stealthAccount.address;
+
+  console.log(stealthAddress, "STEALTH ADDRESS AFTER GET EPHEMERAL");
+
+  return {
+    ephemeralPublicKey,
+    stealthPrivateKey,
+    stealthAddress,
+  };
 }
