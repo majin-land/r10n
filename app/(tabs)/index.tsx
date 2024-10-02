@@ -1,19 +1,36 @@
-import { Buffer } from "buffer"
+import { Buffer } from "buffer";
 
 // Ensure Buffer is globally available
-global.Buffer = Buffer
+global.Buffer = Buffer;
 
-import React, { useState } from "react"
-import { View, Text, Button, StyleSheet } from "react-native"
-import { generateStealthSafeAccount } from "@/libs/stealth"
-import { privateKeyToAccount } from "viem/accounts"
-import { generateFluidkeyMessage, generateKeysFromSignature } from "@fluidkey/stealth-account-kit"
-import { generateStealthInfo, generateStealthMetaAddress } from "@/libs/generate-meta-stealth-address"
+import React, { useState } from "react";
+import { View, Text, Button, StyleSheet } from "react-native";
+import { generateStealthSafeAccount } from "@/libs/stealth";
+import { privateKeyToAccount } from "viem/accounts";
+import {
+  generateFluidkeyMessage,
+  generateKeysFromSignature,
+} from "@fluidkey/stealth-account-kit";
+// import {
+//   generateStealthInfo,
+//   generateStealthMetaAddress,
+// } from "@/libs/generate-meta-stealth-address";
+import {
+  generateStealthMetaAddress,
+  generateStealthInfo,
+  generateStealthPrivate,
+} from "@/libs/stealth";
 
-type SafeAccountResult = Awaited<ReturnType<typeof generateStealthSafeAccount>>
+type SafeAccountResult = Awaited<ReturnType<typeof generateStealthSafeAccount>>;
+type GenerateStealthInfoResult = Awaited<
+  ReturnType<typeof generateStealthInfo>
+>;
+type GenerateStealthPrivate = Awaited<
+  ReturnType<typeof generateStealthPrivate>
+>;
 
-const privateKey = process.env.EXPO_PUBLIC_PRIVATE_KEY || ""
-const address = process.env.EXPO_PUBLIC_ADDRESS || ""
+const privateKey = process.env.EXPO_PUBLIC_PRIVATE_KEY || "";
+const address = process.env.EXPO_PUBLIC_ADDRESS || "";
 
 // 1- Bob generates and keeps secret a spending keys
 // 2- secret spending key digunakan untuk generate stealth meta-address
@@ -22,35 +39,37 @@ const address = process.env.EXPO_PUBLIC_ADDRESS || ""
 // 5- Alice bisa melakukan transfer Asset ke Bob menggunakan stealth Addres Bob
 // 6- Ketika transfer Alice juga publish some extra cryptograpphy data (ephermal pubkey) di onchain
 
-const generatedSpendingPrivateKey = async ({ userPrivateKey, userPin, userAddress }: { userPrivateKey: `0x${string}`, userPin: string; userAddress: string } ) => {
-  const account = privateKeyToAccount(userPrivateKey)
+const generatedSpendingPrivateKey = async ({
+  userPrivateKey,
+  userPin,
+  userAddress,
+}: {
+  userPrivateKey: `0x${string}`;
+  userPin: string;
+  userAddress: string;
+}) => {
+  const account = privateKeyToAccount(userPrivateKey);
   const { message } = generateFluidkeyMessage({
     pin: userPin,
     address: userAddress,
-  })
+  });
   const signature = await account.signMessage({
     message,
-  })
+  });
 
   // Generate the private keys from the signature
   const { spendingPrivateKey, viewingPrivateKey } =
-    generateKeysFromSignature(signature)
+    generateKeysFromSignature(signature);
 
-
-    console.log(spendingPrivateKey, viewingPrivateKey)
-  return spendingPrivateKey
-}
-
+  console.log(spendingPrivateKey, viewingPrivateKey);
+  return spendingPrivateKey;
+};
 
 export default function App() {
-
-  const [results, setResults] = useState<SafeAccountResult>([])
-  const [results2, setResults2] = useState<{
-    metaStealthAddress: `st:eth:0x${string}`;
-    stealthAddress: string;
-    ephemeralPublicKey: string;
-    ViewTag: string;
-  }>()
+  const [results, setResults] = useState<SafeAccountResult>([]);
+  const [results2, setResults2] = useState<GenerateStealthInfoResult>();
+  const [stealthPrivate, setStealthPrivate] =
+    useState<GenerateStealthPrivate>();
 
   const handleGenerateStealthSafe = async () => {
     try {
@@ -58,13 +77,13 @@ export default function App() {
         userPrivateKey: `0x${privateKey}`,
         userPin: "1234",
         userAddress: address,
-      })
-      setResults(generatedResults)
-      console.log(results, "RESULTSSSSS")
+      });
+      setResults(generatedResults);
+      console.log(results, "RESULTSSSSS");
     } catch (error) {
-      console.error("Error generating stealth safe:", error)
+      console.error("Error generating stealth safe:", error);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -90,9 +109,7 @@ export default function App() {
         </View>
       )}
       <View>
-        <Text>
-          Bob Generate Spending Root Key
-        </Text>
+        <Text>Bob Generate Spending Root Key</Text>
       </View>
       <Button
         title="Generate Root Spending key"
@@ -101,37 +118,45 @@ export default function App() {
             userPrivateKey: `0x${privateKey}`,
             userPin: "1234",
             userAddress: address,
-          })
+          });
         }}
       />
       <View>
-        Bob Get Stealth meta-address
+        <Text>Bob Get Stealth meta-address</Text>
       </View>
-      <Button 
+      <Button
         title="Get stealth meta-addres"
-        onPress={() => {
-          const getMetaAddress = generateStealthMetaAddress()
-          console.log(getMetaAddress, 'getMetaAddres')
-          const stealthInfo = generateStealthInfo(getMetaAddress[4])
-          setResults2({
-            metaStealthAddress: getMetaAddress[4],
-            ...stealthInfo,
-          })
+        onPress={async () => {
+          const getMetaAddress = await generateStealthMetaAddress({
+            userPrivateKey: `0x${privateKey}`,
+            userPin: "1234",
+            userAddress: address,
+          });
+          console.log(getMetaAddress, "getMetaAddres");
+          const stealthInfo = await generateStealthInfo(
+            getMetaAddress.stealthMetaAddress as `st:eth:0x${string}`
+          );
+          const stealthPrivate = await generateStealthPrivate({
+            userPrivateKey: `0x${privateKey}`,
+            userPin: "1234",
+            userAddress: address,
+            ephemeralPublicKey: stealthInfo.ephemeralPublicKey,
+          });
+          setResults2(stealthInfo);
+          setStealthPrivate(stealthPrivate);
         }}
       />
       <View>
+        <Text>Stealth Meta Address: {results2?.stealthMetaAddress}</Text>
+        <Text>Stealth Address: {results2?.stealthAddress}</Text>
+        <Text>Ephemeral Public Key: {results2?.ephemeralPublicKey}</Text>
+        <Text>Stealth Private Key: {stealthPrivate?.stealthPrivateKey}</Text>
         <Text>
-          {results2?.metaStealthAddress}
-        </Text>
-        <Text>
-          {results2?.stealthAddress}
-        </Text>
-        <Text>
-          {results2?.ephemeralPublicKey}
+          Stealth Private Public Address: {stealthPrivate?.stealthAddress}
         </Text>
       </View>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -150,4 +175,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: 10,
   },
-})
+});
