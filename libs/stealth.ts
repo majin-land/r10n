@@ -11,9 +11,7 @@ import {
 } from "@fluidkey/stealth-account-kit";
 
 import * as secp from "@noble/secp256k1";
-import * as ethers from "ethers";
-import { Hex, keccak256 as vKeccak256 } from "viem";
-import { keccak256 } from "js-sha3";
+import { Hex, keccak256 } from "viem";
 
 import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
 
@@ -203,7 +201,6 @@ export async function generateStealthMetaAddress({
 export async function generateStealthInfo(
   stealthMetaAddress: `st:eth:0x${string}`
 ) {
-  console.log(stealthMetaAddress);
   if (!stealthMetaAddress.startsWith("st:eth:0x")) {
     throw new Error(
       "Wrong address format; Address must start with `st:eth:0x...`"
@@ -215,7 +212,15 @@ export async function generateStealthInfo(
 
   // generate random ephemeral private key
   const ephemeralPrivateKey = randomPrivateKey() as Hex;
-  console.log(ephemeralPrivateKey, "EPHEMERAL PRIVATE KEY");
+
+  // generate shared secret
+  const sharedSecret = secp.getSharedSecret(
+    ephemeralPrivateKey.replace("0x", ""),
+    viewPublicKey.replace("0x", "")
+  );
+  const hashedSharedSecret = keccak256(Buffer.from(sharedSecret.slice(2)));
+
+  const viewTag = hashedSharedSecret.slice(0, 4);
 
   // Generate the stealth owner address
   const { stealthAddresses } = generateStealthAddresses({
@@ -231,6 +236,7 @@ export async function generateStealthInfo(
     stealthMetaAddress,
     stealthAddress: stealthAddresses,
     ephemeralPublicKey,
+    metadata: viewTag,
   };
 }
 
@@ -267,8 +273,6 @@ export async function generateStealthPrivate({
 
   const stealthAccount = privateKeyToAccount(stealthPrivateKey);
   const stealthAddress = stealthAccount.address;
-
-  console.log(stealthAddress, "STEALTH ADDRESS AFTER GET EPHEMERAL");
 
   return {
     ephemeralPublicKey,

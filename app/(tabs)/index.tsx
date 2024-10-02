@@ -150,6 +150,7 @@ export default function App() {
         <Text>Stealth Meta Address: {results2?.stealthMetaAddress}</Text>
         <Text>Stealth Address: {results2?.stealthAddress}</Text>
         <Text>Ephemeral Public Key: {results2?.ephemeralPublicKey}</Text>
+        <Text>Metadata: {results2?.metadata}</Text>
         <Text>Stealth Private Key: {stealthPrivate?.stealthPrivateKey}</Text>
         <Text>
           Stealth Private Public Address: {stealthPrivate?.stealthAddress}
