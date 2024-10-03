@@ -11,7 +11,6 @@ import {
 } from "@fluidkey/stealth-account-kit";
 
 import * as secp from "@noble/secp256k1";
-import * as ethers from "ethers";
 import { Hex, keccak256 } from "viem";
 
 import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
@@ -218,7 +217,6 @@ export async function generateStealthMetaAddress({
 export async function generateStealthInfo(
   stealthMetaAddress: `st:eth:0x${string}`
 ) {
-  console.log(stealthMetaAddress);
   if (!stealthMetaAddress.startsWith("st:eth:0x")) {
     throw new Error(
       "Wrong address format; Address must start with `st:eth:0x...`"
