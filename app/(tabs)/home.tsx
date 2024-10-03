@@ -20,6 +20,8 @@ import {
   generateStealthInfo,
   generateStealthPrivate,
 } from "@/libs/stealth";
+import { getUsdcBalance, getUserBalance, registerKeys } from "@/libs/stealth-address-registry-contract";
+import { formatEther } from "viem";
 
 type SafeAccountResult = Awaited<ReturnType<typeof generateStealthSafeAccount>>;
 type GenerateStealthInfoResult = Awaited<
@@ -87,6 +89,15 @@ export default function App() {
 
   return (
     <View style={styles.container}>
+      <Text>
+        Connect
+      </Text>
+      <Button
+        title="Create Wallet"
+        onPress={() => {
+          console.log('wallet created')
+        }}
+      />
       <Text style={styles.title}>Stealth Safe Account Generator</Text>
       <Button
         title="Generate Stealth Safe"
@@ -108,19 +119,42 @@ export default function App() {
           ))}
         </View>
       )}
-      <View>
+      {/* <View>
         <Text>Bob Generate Spending Root Key</Text>
       </View>
       <Button
         title="Generate Root Spending key"
-        onPress={() => {
-          generatedSpendingPrivateKey({
+        onPress={async () => {
+          const rootSpendingKey = await generatedSpendingPrivateKey({
             userPrivateKey: `0x${privateKey}`,
             userPin: "1234",
             userAddress: address,
           });
         }}
-      />
+      /> */}
+      {/* <Text>
+        {rootSpendingKey}
+      </Text> */}
+      {/* <Text>
+        Generate stealth meta address v2
+      </Text>
+      <Button
+        title="Generate meta address stelath"
+        onPress={async () => {
+          const stealthMetaAddress = await genereateStealthMetaAddress({
+            spendingPrivateKey: rootSpendingKey,
+            viewingPrivateKey: rootViewingKey,
+          })
+
+          // const stealthInfo = generateStealthInfo(stealthMetaAddress)
+
+          console.log(stealthMetaAddress, 'stealthMetaAddress')
+          // console.log(stealthInfo, 'stealthInfo')
+        }}
+      /> */}
+      {/* <Text> */}
+
+      {/* </Text> */}
       <View>
         <Text>Bob Get Stealth meta-address</Text>
       </View>
@@ -144,6 +178,14 @@ export default function App() {
           });
           setResults2(stealthInfo);
           setStealthPrivate(stealthPrivate);
+          console.log('excecute smart contract')
+          // registerKeys(1, results2?.stealthMetaAddress?.slice(7) || '')
+          const userBalance = await getUserBalance(address as `0x${string}`)
+          console.log(formatEther(userBalance), 'eth balance')
+          console.log(userBalance, 'eth balance')
+          const usdcBalance = await getUsdcBalance(address as `0x${string}`)
+          console.log('usdcBalance', usdcBalance)
+          console.log('usdcBalance', formatEther(usdcBalance))
         }}
       />
       <View>
@@ -155,6 +197,29 @@ export default function App() {
           Stealth Private Public Address: {stealthPrivate?.stealthAddress}
         </Text>
       </View>
+      <Text>
+        Get Stealth Private Key to receive funds
+      </Text>
+      {/* <View>
+        <Button
+          title="Get Stealth Private Key to receive funds"
+          onPress={() => {
+            const { stealthPrivateKey } = generateStealthPrivateKey({
+              spendingPrivateKey: results2?.spendingPrivateKey as `0x${string}` || '0x',
+              ephemeralPublicKey: results2?.ephemeralPublicKey as `0x${string}` || '0x',
+            });
+            // setStelthPk(stealthPrivateKey)
+            // console.log(results2?.spendingPrivateKey, 'spendingPrivateKey')
+            // console.log(results2?.ephemeralPublicKey, 'ephemeralPublicKey')
+            // console.log(results2?.ephemeralPublicKey, 'stealthPrivateKey')
+          }}
+        />
+        <View>
+          <Text>
+            {stealthPk}
+          </Text>
+        </View>
+      </View> */}
     </View>
   );
 }

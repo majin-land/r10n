@@ -12,10 +12,11 @@ import {
 
 import * as secp from "@noble/secp256k1";
 import * as ethers from "ethers";
-import { Hex, keccak256 as vKeccak256 } from "viem";
-import { keccak256 } from "js-sha3";
+import { Hex, keccak256 } from "viem";
 
 import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
+
+import { registerKeys, registerKeysOnBehalf } from "./smart-contract";
 
 /**
  * End-to-end example of how to generate stealth Safe accounts based on the user's private key and the key generation message to be signed.
@@ -191,6 +192,20 @@ export async function generateStealthMetaAddress({
     compressedSpendingPublicKey.slice(2) +
     compressedViewingPublicKey.slice(2);
 
+  // publish to registry smart contract
+  registerKeys({
+    userPrivateKey,
+    schemeId: 1,
+    stealthMetaAddress,
+  });
+  registerKeysOnBehalf({
+    userPrivateKey,
+    registrant: userAddress,
+    schemeId: 1,
+    signature,
+    stealthMetaAddress,
+  });
+
   return {
     spendingPrivateKey,
     viewingPrivateKey,
@@ -215,7 +230,15 @@ export async function generateStealthInfo(
 
   // generate random ephemeral private key
   const ephemeralPrivateKey = randomPrivateKey() as Hex;
-  console.log(ephemeralPrivateKey, "EPHEMERAL PRIVATE KEY");
+
+  // generate shared secret
+  const sharedSecret = secp.getSharedSecret(
+    ephemeralPrivateKey.replace("0x", ""),
+    viewPublicKey.replace("0x", "")
+  );
+  const hashedSharedSecret = keccak256(Buffer.from(sharedSecret.slice(2)));
+
+  const viewTag = hashedSharedSecret.slice(0, 4);
 
   // Generate the stealth owner address
   const { stealthAddresses } = generateStealthAddresses({
@@ -231,6 +254,7 @@ export async function generateStealthInfo(
     stealthMetaAddress,
     stealthAddress: stealthAddresses,
     ephemeralPublicKey,
+    metadata: viewTag,
   };
 }
 
@@ -267,8 +291,6 @@ export async function generateStealthPrivate({
 
   const stealthAccount = privateKeyToAccount(stealthPrivateKey);
   const stealthAddress = stealthAccount.address;
-
-  console.log(stealthAddress, "STEALTH ADDRESS AFTER GET EPHEMERAL");
 
   return {
     ephemeralPublicKey,
