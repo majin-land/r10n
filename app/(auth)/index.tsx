@@ -1,3 +1,5 @@
+import 'react-native-get-random-values'
+
 import { createUserWalletEthers } from "@/libs/create-wallet-ethers"
 import React, { useCallback, useEffect, useState } from "react"
 import { Button, View, Text, StyleSheet, Alert } from "react-native"
@@ -26,7 +28,7 @@ const CreateWallet = () => {
     try {
       const address = await SecureStore.getItemAsync("walletAddress")
       const privateKey = await SecureStore.getItemAsync("walletPrivateKey")
-
+      console.log(address, privateKey, 'privateKey')
       if (address && privateKey) {
         // Wallet exists, update state
         setUserWalletAddress(address)
