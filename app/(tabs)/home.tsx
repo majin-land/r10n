@@ -167,6 +167,7 @@ export default function App() {
             userAddress: address,
           });
           console.log(getMetaAddress, "getMetaAddres");
+
           const stealthInfo = await generateStealthInfo(
             getMetaAddress.stealthMetaAddress as `st:eth:0x${string}`
           );
@@ -179,7 +180,8 @@ export default function App() {
           setResults2(stealthInfo);
           setStealthPrivate(stealthPrivate);
           console.log('excecute smart contract')
-          // registerKeys(1, results2?.stealthMetaAddress?.slice(7) || '')
+          console.log(results2?.stealthMetaAddress?.slice(7), 'iuhighuigigi')
+          registerKeys(1, results2?.stealthMetaAddress?.slice(7) || '')
           const userBalance = await getUserBalance(address as `0x${string}`)
           console.log(formatEther(userBalance), 'eth balance')
           console.log(userBalance, 'eth balance')
