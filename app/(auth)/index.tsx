@@ -1,7 +1,7 @@
 import { createUserWalletEthers } from "@/libs/create-wallet-ethers"
 import React, { useCallback, useEffect, useState } from "react"
 import { Button, View, Text, StyleSheet, Alert } from "react-native"
-import * as Keychain from 'react-native-keychain'
+import * as SecureStore from 'expo-secure-store'
 
 const CreateWallet = () => {
   const [rootPrivateKey, setRootPrivateKey] = useState('')
@@ -9,45 +9,44 @@ const CreateWallet = () => {
   const [userWalletAddressPk, setUserWalletAddressPk] = useState('')
   const [isWalletCreated, setIsWalletCreated] = useState(false)
 
-  const storeWalletInKeychain = async (address, privateKey) => {
+  // Function to store wallet in SecureStore
+  const storeWalletInSecureStore = async (address: string, privateKey: string) => {
     try {
-      await Keychain.setGenericPassword(address, privateKey, {
-        service: "wallet",
-      });
-      Alert.alert("Success", "Wallet stored securely in Keychain!")
+      await SecureStore.setItemAsync("walletAddress", address)
+      await SecureStore.setItemAsync("walletPrivateKey", privateKey)
+      Alert.alert("Success", "Wallet stored securely in Secure Store!")
     } catch (error) {
-      console.error("Error storing wallet in Keychain", error)
+      console.error("Error storing wallet in Secure Store", error)
       Alert.alert("Error", "Failed to store wallet")
     }
   }
 
-  const retrieveWalletFromKeychain = async () => {
+  // Function to retrieve wallet from SecureStore
+  const retrieveWalletFromSecureStore = async () => {
     try {
-      console.log('---------')
+      const address = await SecureStore.getItemAsync("walletAddress")
+      const privateKey = await SecureStore.getItemAsync("walletPrivateKey")
 
-      const credentials = await Keychain.hasGenericPassword()
-      // const credentials = await Keychain.getGenericPassword({ service: "wallet" })
-      console.log(credentials, 'credentials')
-      if (credentials) {
+      if (address && privateKey) {
         // Wallet exists, update state
-        setUserWalletAddress(credentials.username)
-        setUserWalletAddressPk(credentials.password)
+        setUserWalletAddress(address)
+        setUserWalletAddressPk(privateKey)
         setIsWalletCreated(true)
-        Alert.alert("Success", "Wallet retrieved from Keychain")
+        Alert.alert("Success", "Wallet retrieved from Secure Store")
       } else {
-        console.log('No credentials stored, creating a new wallet...')
+        console.log('No wallet stored, creating a new wallet...')
         await createUserWallet()
       }
     } catch (error) {
-      console.error("Error retrieving wallet from Keychain", error)
+      console.error("Error retrieving wallet from Secure Store", error)
       Alert.alert("Error", "Failed to retrieve wallet")
     }
   }
 
+  // Function to create a new wallet
   const createUserWallet = useCallback(async () => {
     try {
       const result = await createUserWalletEthers()
-      console.log(result)
       const address = result.accounts[0].address
       const privateKey = result.accounts[0].privateKey
       const bip32RootKey = result.bip32RootKey
@@ -57,8 +56,8 @@ const CreateWallet = () => {
       setRootPrivateKey(bip32RootKey)
       setIsWalletCreated(true)
 
-      // Store the wallet credentials in Keychain
-      await storeWalletInKeychain(address, privateKey)
+      // Store the wallet credentials in SecureStore
+      await storeWalletInSecureStore(address, privateKey)
     } catch (error) {
       console.error("Error creating wallet", error)
       Alert.alert("Error", "Failed to create wallet")
@@ -66,8 +65,8 @@ const CreateWallet = () => {
   }, [])
 
   useEffect(() => {
-    // Check if wallet exists in keychain when the component mounts
-    retrieveWalletFromKeychain()
+    // Check if wallet exists in SecureStore when the component mounts
+    retrieveWalletFromSecureStore()
   }, [])
 
   return (
