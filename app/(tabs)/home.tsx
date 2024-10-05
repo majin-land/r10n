@@ -3,6 +3,9 @@ import { formatStealthMetaAddress } from '@/utils/helper';
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
+import { useQuery } from '@apollo/client';
+import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets';
+import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements';
 
 // Updated activities data
 const activitiesData = [
@@ -15,6 +18,14 @@ const HomeScreen: React.FC = () => {
   const { stealthMetaAddress } = useStealthMetaAddress();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
+    variables: {}
+  })
+
+  const { data: a,  } = useQuery(GET_ANNOUNCEMENTS, {
+    variables: {}
+  })
+
   const copyToClipboard = async () => {
     await Clipboard.setStringAsync(stealthMetaAddress as string);
     Alert.alert("Copied to Clipboard", "Your address has been copied to the clipboard.");
@@ -23,6 +34,12 @@ const HomeScreen: React.FC = () => {
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
+
+  // if (loading) return <Text>Loading...</Text>;
+  // if (error) return <Text>Error: {error.message}</Text>;
+
+  console.log('Registry --', data)
+  console.log('Announce --', a)
 
   const renderActivity = ({ item }: { item: typeof activitiesData[0] }) => (
     <View style={styles.activityContainer}>
@@ -112,17 +129,18 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     padding: 20,
     borderRadius: 10,
-    backgroundColor: '#BBDEFB', // Light blue
+    backgroundColor: 'linear-gradient(90deg, rgba(23,115,250,1) 0%, rgba(250,181,181,1) 35%)',
+    color: '#FFFFFF',
     alignItems: 'center',
   },
   balanceText: {
     fontSize: 16,
-    color: '#555',
+    color: '#FFFFFF',
   },
   balanceAmount: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#000',
+    color: '#FFFFFF',
   },
   activitiesLabel: {
     fontSize: 16,
