@@ -52,6 +52,8 @@ const HomeScreen: React.FC = () => {
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
+  const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta');
+
   const router = useRouter(); 
 
   const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
@@ -65,13 +67,10 @@ const HomeScreen: React.FC = () => {
   // console.log('announcements', a)
   // console.log('registry', data)
 
-  const copyToClipboard = async () => {
-    await Clipboard.setStringAsync(stealthMetaAddress as string)
-    Alert.alert(
-      'Copied to Clipboard',
-      'Your address has been copied to the clipboard.',
-    )
-  }
+  const copyToClipboard = async (address: string) => {
+    await Clipboard.setStringAsync(address);
+    alert('Copied to Clipboard');
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
@@ -84,11 +83,12 @@ const HomeScreen: React.FC = () => {
       )
       console.log(stealthInfo.stealthAddress, 'stealth address')
 
-      setStealthAddress(stealthInfo.stealthAddress)
+      setStealthAddress(stealthInfo.stealthAddress as unknown as `0x${string}`)
 
       // TODO: Store to storage and publish generated Address
     } catch (error) {
-      console.log(error.message)
+      const err = error instanceof Error ? JSON.parse(JSON.stringify(error)) : String(error)
+      console.error(err)
     }
   }
 
@@ -130,19 +130,44 @@ const HomeScreen: React.FC = () => {
     <View style={styles.container}>
       <Text style={styles.header}>R1ON</Text>
       <Text style={styles.label}>Receive</Text>
-      <View style={styles.receiveContainer}>
-        <Text style={styles.address}>
-          {formatStealthMetaAddress(stealthMetaAddress as string)}
-        </Text>
-        <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-          <Text style={styles.copyButtonText}>Copy</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={styles.receiveContainer}>
-        <Text style={styles.address}>{stealthAddress}</Text>
-        <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-          <Text style={styles.copyButtonText}>Copy</Text>
-        </TouchableOpacity>
+      <View style={styles.tabWrapper}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tabButton, selectedTab === 'meta' && styles.activeTab]}
+            onPress={() => setSelectedTab('meta')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>Meta Address</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tabButton, selectedTab === 'stealth' && styles.activeTab]}
+            onPress={() => setSelectedTab('stealth')}
+          >
+            <Text style={[styles.tabText, selectedTab === 'stealth' && styles.activeTabText]}>Stealth Address</Text>
+          </TouchableOpacity>
+        </View>
+        {selectedTab === 'meta' ? (
+          <View style={styles.addressContainer}>
+            <Text style={styles.address}>
+              {formatStealthMetaAddress(stealthMetaAddress || '')}
+            </Text>
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => copyToClipboard(stealthMetaAddress || '')}
+            >
+              <Text style={styles.copyButtonText}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.addressContainer}>
+            <Text style={styles.address}>{stealthAddress}</Text>
+            <TouchableOpacity
+              style={styles.copyButton}
+              onPress={() => copyToClipboard(stealthAddress || '')}
+            >
+              <Text style={styles.copyButtonText}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={styles.balanceContainer}>
@@ -168,7 +193,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F9F9F9', // light background color
+    backgroundColor: '#F3F3F3', // light background color
   },
   header: {
     fontSize: 28,
@@ -290,6 +315,42 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+  },
+  tabButton: {
+    flex: 1,
+    padding: 10,
+    backgroundColor: '#E0E0E0',
+    alignItems: 'center',
+    borderRadius: 0,
+  },
+  activeTab: {
+    backgroundColor: '#fff',
+  },
+  tabText: {
+    color: '#FFF',
+    fontSize: 14,
+  },
+  activeTabText: {
+    color: '#000',
+    textDecorationLine: 'underline',
+    fontWeight: 'bold',
+  },
+  addressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 10,
+    padding: 10,
+    backgroundColor: '#E3F2FD',
+  },
+  tabWrapper: {
+    backgroundColor: '#fff',
+    padding: 4
+  }
 })
 
 export default HomeScreen

@@ -90,6 +90,7 @@ export const WalletProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const clearWallet = async (): Promise<void> => {
     try {
+      // We shouldn't reset user wallet keys, remove this code on productions
       await SecureStore.deleteItemAsync("walletAddress");
       await SecureStore.deleteItemAsync("privateKey");
 
