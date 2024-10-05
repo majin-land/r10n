@@ -90,7 +90,7 @@ const HomeScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
       <View style={styles.receiveContainer}>
-        <Text style={styles.address}>{formatStealthAddress(stealthAddress as string)}</Text>
+        <Text style={styles.address}>{stealthAddress}</Text>
         <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
           <Text style={styles.copyButtonText}>Copy</Text>
         </TouchableOpacity>

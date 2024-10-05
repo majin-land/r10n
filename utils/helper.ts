@@ -44,7 +44,7 @@ export const formatStealthAddress = (address: string): string => {
   if (!address) return "";
 
   // Take the first 8 characters and the last 4 characters of the address
-  const start = address.slice(0, 6);
+  const start = address.slice(0, 10);
   const end = address.slice(-4);
 
   return `${start}....${end}`;
