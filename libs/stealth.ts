@@ -185,25 +185,27 @@ export async function generateStealthMetaAddress({
   const compressedSpendingPublicKey = compressPublicKey(spendingPublicKey);
   const compressedViewingPublicKey = compressPublicKey(viewingPublicKey);
 
+  const stealthMetaAddressWithoutPrefix = compressedSpendingPublicKey.slice(2) + compressedViewingPublicKey.slice(2);
+
   // Get the stealth meta address
   const stealthMetaAddress =
     "st:base:0x" +
-    compressedSpendingPublicKey.slice(2) +
-    compressedViewingPublicKey.slice(2);
+    stealthMetaAddressWithoutPrefix
 
   // publish to registry smart contract
   registerKeys({
     userPrivateKey,
     schemeId: 1,
-    stealthMetaAddress,
-  });
+    stealthMetaAddress: stealthMetaAddressWithoutPrefix,
+  }).catch((e) => console.log(e));
+
   registerKeysOnBehalf({
     userPrivateKey,
     registrant: userAddress,
     schemeId: 1,
     signature,
-    stealthMetaAddress,
-  });
+    stealthMetaAddress: stealthMetaAddressWithoutPrefix,
+  }).catch((e) => console.log(e));
 
   return {
     spendingPrivateKey,

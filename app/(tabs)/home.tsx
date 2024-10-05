@@ -10,6 +10,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Button,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
@@ -17,6 +18,7 @@ import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddre
 import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
 import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
+import { useRouter } from 'expo-router'
 
 // Updated activities data
 const activitiesData = [
@@ -44,12 +46,14 @@ const activitiesData = [
 ]
 
 const HomeScreen: React.FC = () => {
-  const { privateKey, walletAddress } = useWallet()
+  const { privateKey, walletAddress, clearWallet } = useWallet()
   const { stealthMetaAddress, spendingPublicKey, viewingPublicKey } = useStealthMetaAddress()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
+  const router = useRouter(); 
+
   const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
     variables: {},
   })
@@ -75,8 +79,6 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
-      console.log(spendingPublicKey, ' ' , viewingPublicKey, 'lllllllllllllll')
-
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
@@ -147,7 +149,10 @@ const HomeScreen: React.FC = () => {
         <Text style={styles.balanceText}>Balance</Text>
         <Text style={styles.balanceAmount}>400 USDC</Text>
       </View>
-
+      <TouchableOpacity style={styles.clearButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
+        <Text style={styles.clearButtonText}>Reset keys</Text>
+      </TouchableOpacity>
+      
       <Text style={styles.activitiesLabel}>Activities</Text>
       <FlatList
         data={activitiesData}
@@ -267,6 +272,23 @@ const styles = StyleSheet.create({
   detailsText: {
     fontSize: 14,
     color: '#555',
+  },
+  resetButton: {
+    marginTop: 16,
+    marginBottom: 16
+  },
+  clearButton: {
+    backgroundColor: "#FF5252",
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 20,
+  },
+  clearButtonText: {
+    fontSize: 16,
+    color: "#FFF",
+    fontWeight: "600",
+    textAlign: "center",
   },
 })
 
