@@ -5,41 +5,41 @@ import {
   http,
   getContract,
   erc20Abi,
-} from "viem";
-import { sepolia, baseSepolia } from "viem/chains";
-import { privateKeyToAccount } from "viem/accounts";
-import ERC6538RegistryABI from "./abi/ERC6538RegistryABI";
-import { generateFluidkeyMessage } from "@fluidkey/stealth-account-kit";
+} from "viem"
+import { sepolia, baseSepolia } from "viem/chains"
+import { privateKeyToAccount } from "viem/accounts"
+import ERC6538RegistryABI from "./abi/ERC6538RegistryABI"
+import { generateFluidkeyMessage } from "@fluidkey/stealth-account-kit"
 
 export const client = createPublicClient({
   chain: baseSepolia,
-  transport: http(),
-});
+  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+})
 
 const walletClient = createWalletClient({
   account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`),
   chain: baseSepolia,
-  transport: http(),
-});
+  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+})
 
 export async function generateSignature() {
   const account = privateKeyToAccount(
     `0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`
-  );
+  )
   const { message } = generateFluidkeyMessage({
     pin: "1234",
     address: `0x${process.env.EXPO_PUBLIC_ADDRESS}`,
-  });
+  })
   const signature = await account.signMessage({
     message,
-  });
-  return signature;
+  })
+  return signature
 }
 
 // get eth balance
 export const getUserBalance = (address: `0x${string}`) => {
-  return client.getBalance({ address });
-};
+  return client.getBalance({ address })
+}
 
 // get usdc balance
 export const getUsdcBalance = async (address: `0x${string}`) => {
@@ -50,9 +50,9 @@ export const getUsdcBalance = async (address: `0x${string}`) => {
       public: client,
       wallet: walletClient,
     },
-  });
-  return contract.read.balanceOf([address]);
-};
+  })
+  return contract.read.balanceOf([address])
+}
 
 // export const transferUsdcContract
 // Create stealth Address store to ERC6538Registry contract

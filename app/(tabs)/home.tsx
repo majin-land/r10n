@@ -1,90 +1,134 @@
-import 'react-native-get-random-values';
+import 'react-native-get-random-values'
 
-import { useStealthMetaAddress } from '@/context/StealthMetaAddress';
-import { formatStealthAddress, formatStealthMetaAddress } from '@/utils/helper';
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
-import { useQuery } from '@apollo/client';
-import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets';
-import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements';
-import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth';
-import { useWallet } from '@/context/WalletContext';
+import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
+import { formatStealthAddress, formatStealthMetaAddress } from '@/utils/helper'
+import React, { useEffect, useState } from 'react'
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+} from 'react-native'
+import * as Clipboard from 'expo-clipboard'
+import { useQuery } from '@apollo/client'
+import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets'
+import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
+import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth'
+import { useWallet } from '@/context/WalletContext'
 
 // Updated activities data
 const activitiesData = [
-  { id: '1', date: 'October 1, 2024', amount: '400', type: 'received', token: 'USDC' },
-  { id: '2', date: 'October 1, 2024', amount: '200', type: 'sent', token: 'USDC' },
-  { id: '3', date: 'October 1, 2024', amount: '100', type: 'received', token: 'USDC' },
-];
+  {
+    id: '1',
+    date: 'October 1, 2024',
+    amount: '400',
+    type: 'received',
+    token: 'USDC',
+  },
+  {
+    id: '2',
+    date: 'October 1, 2024',
+    amount: '200',
+    type: 'sent',
+    token: 'USDC',
+  },
+  {
+    id: '3',
+    date: 'October 1, 2024',
+    amount: '100',
+    type: 'received',
+    token: 'USDC',
+  },
+]
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress } = useWallet()
-  const { stealthMetaAddress } = useStealthMetaAddress();
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [stealthAddress, setStealtAddress] = useState<`0x${string}` | null>(null)
+  const { stealthMetaAddress } = useStealthMetaAddress()
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
+    null,
+  )
   const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
-    variables: {}
+    variables: {},
   })
 
-  const { data: a,  } = useQuery(GET_ANNOUNCEMENTS, {
-    variables: {}
+  const { data: a } = useQuery(GET_ANNOUNCEMENTS, {
+    variables: {},
   })
+
+  // console.log('announcements', a)
+  // console.log('registry', data)
 
   const copyToClipboard = async () => {
-    await Clipboard.setStringAsync(stealthMetaAddress as string);
-    Alert.alert("Copied to Clipboard", "Your address has been copied to the clipboard.");
-  };
+    await Clipboard.setStringAsync(stealthMetaAddress as string)
+    Alert.alert(
+      'Copied to Clipboard',
+      'Your address has been copied to the clipboard.',
+    )
+  }
 
   const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
-  };
+    setExpandedId(expandedId === id ? null : id)
+  }
 
-  const genereteInitialStealthAddress = async () => {
+  const generateInitialStealthAddress = async () => {
     try {
       const stealthInfo = await generateStealthInfo(
-        stealthMetaAddress as `st:eth:0x${string}`
-      );
-      
-      setStealtAddress(stealthInfo.stealthAddress)
+        stealthMetaAddress as `st:base:0x${string}`,
+      )
+
+      setStealthAddress(stealthInfo.stealthAddress)
 
       // TODO: Store to storage and publish generated Address
-    } catch(error) {
+    } catch (error) {
       console.log(error.message)
     }
   }
 
   useEffect(() => {
-    genereteInitialStealthAddress()
+    generateInitialStealthAddress()
   }, [])
 
   // if (loading) return <Text>Loading...</Text>;
   // if (error) return <Text>Error: {error.message}</Text>;
 
-  const renderActivity = ({ item }: { item: typeof activitiesData[0] }) => (
+  const renderActivity = ({ item }: { item: (typeof activitiesData)[0] }) => (
     <View style={styles.activityContainer}>
-      <TouchableOpacity onPress={() => toggleExpand(item.id)} style={styles.activityHeader}>
+      <TouchableOpacity
+        onPress={() => toggleExpand(item.id)}
+        style={styles.activityHeader}
+      >
         <Text style={styles.date}>{item.date}</Text>
-        <Text style={[styles.amount, item.type === 'sent' ? styles.sent : styles.received]}>
+        <Text
+          style={[
+            styles.amount,
+            item.type === 'sent' ? styles.sent : styles.received,
+          ]}
+        >
           {item.amount} <Text style={styles.token}>{item.token}</Text>
         </Text>
       </TouchableOpacity>
       {expandedId === item.id && (
         <View style={styles.details}>
           <Text style={styles.detailsText}>
-            {item.type === 'sent' ? 'You sent' : 'You received'} {item.amount} {item.token}
+            {item.type === 'sent' ? 'You sent' : 'You received'} {item.amount}{' '}
+            {item.token}
           </Text>
         </View>
       )}
     </View>
-  );
+  )
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>R1ON</Text>
       <Text style={styles.label}>Receive</Text>
       <View style={styles.receiveContainer}>
-        <Text style={styles.address}>{formatStealthMetaAddress(stealthMetaAddress as string)}</Text>
+        <Text style={styles.address}>
+          {formatStealthMetaAddress(stealthMetaAddress as string)}
+        </Text>
         <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
           <Text style={styles.copyButtonText}>Copy</Text>
         </TouchableOpacity>
@@ -109,8 +153,8 @@ const HomeScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       />
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -155,7 +199,8 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     padding: 20,
     borderRadius: 10,
-    backgroundColor: 'linear-gradient(90deg, rgba(23,115,250,1) 0%, rgba(250,181,181,1) 35%)',
+    backgroundColor:
+      'linear-gradient(90deg, rgba(23,115,250,1) 0%, rgba(250,181,181,1) 35%)',
     color: '#FFFFFF',
     alignItems: 'center',
   },
@@ -220,6 +265,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
   },
-});
+})
 
-export default HomeScreen;
+export default HomeScreen
