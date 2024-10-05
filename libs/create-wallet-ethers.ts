@@ -14,7 +14,6 @@ function randomPrivateKey(): bigint {
 export const createUserWalletEthers = async () => {
   // Generate random entropy
   const random = randomPrivateKey()
-
   // Broadcast and collect entropy from nodes (assuming Lit.Actions works similarly)
   const entropies = [
     toHex(random),
@@ -41,7 +40,8 @@ export const createUserWalletEthers = async () => {
   const seed = await pbkdf2Async(sha512, entropy, salt, { c: 2048, dkLen: 64 })
 
   // Generate BIP32 Root Key
-  const rootHDNode = ethers.HDNodeWallet.fromSeed(seed)
+  const rootHDNode = ethers.utils.HDNode.fromSeed(seed)
+
   // derivePath("m", seed)
   const { extendedKey: bip32RootKey } = rootHDNode
 

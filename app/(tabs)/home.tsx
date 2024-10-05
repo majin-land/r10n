@@ -45,7 +45,7 @@ const activitiesData = [
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress } = useWallet()
-  const { stealthMetaAddress } = useStealthMetaAddress()
+  const { stealthMetaAddress, spendingPublicKey, viewingPublicKey } = useStealthMetaAddress()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
@@ -75,9 +75,12 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
+      console.log(spendingPublicKey, ' ' , viewingPublicKey, 'lllllllllllllll')
+
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
+      console.log(stealthInfo.stealthAddress, 'stealth address')
 
       setStealthAddress(stealthInfo.stealthAddress)
 

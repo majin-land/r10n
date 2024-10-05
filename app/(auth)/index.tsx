@@ -19,7 +19,7 @@ const WalletScreen: React.FC = () => {
   const handleCreateWallet = async () => {
     // Check if a wallet already exists
     const existingWallet = await retrieveWallet();
-    
+
     // If a wallet exists, use its details
     if (existingWallet) {
       const { walletAddress, privateKey } = existingWallet;
@@ -37,7 +37,7 @@ const WalletScreen: React.FC = () => {
       await storeWallet(address, privateKey, bip32RootKey);
       return { address, privateKey };
     };
-  
+    
     // Create the new wallet and proceed with its details
     const { address: newAddress, privateKey: newPrivateKey } = await createNewWallet();
     await retrieveStealthMetaAddress(newPrivateKey, newAddress);
