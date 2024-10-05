@@ -12,6 +12,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
 import { WalletProvider } from '@/context/WalletContext';
 import { StealthMetaAddressProvider } from '@/context/StealthMetaAddress';
+import ApolloProviderApps from '@/apollo';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -33,17 +34,18 @@ export default function RootLayout() {
   }
 
   return (
-    
-    <WalletProvider>
-      <StealthMetaAddressProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(auth)/index" options={{ headerShown: false }} /> {/* Connect Wallet Screen */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> {/* Tabs for Home, Transfer, Activity */}
-          <Stack.Screen name="+not-found" />
+    <ApolloProviderApps>
+      <WalletProvider>
+        <StealthMetaAddressProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          <Stack>
+            <Stack.Screen name="(auth)/index" options={{ headerShown: false }} /> {/* Connect Wallet Screen */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> {/* Tabs for Home, Transfer, Activity */}
+            <Stack.Screen name="+not-found" />
           </Stack>
-      </ThemeProvider>
-    </StealthMetaAddressProvider>
-    </WalletProvider>
+        </ThemeProvider>
+      </StealthMetaAddressProvider>
+      </WalletProvider>
+    </ApolloProviderApps>
   );
 }
