@@ -225,8 +225,8 @@ export async function generateStealthInfo(
     );
   }
 
-  const spendPublicKey = ("0x" + stealthMetaAddress.slice(10, 75)) as Hex;
-  const viewPublicKey = ("0x" + stealthMetaAddress.slice(75)) as Hex;
+  const spendPublicKey = ("0x" + stealthMetaAddress.slice(10, 76)) as Hex;
+  const viewPublicKey = ("0x" + stealthMetaAddress.slice(76)) as Hex;
   console.log('spendPublicKey', spendPublicKey)
   console.log('stealthMetaAddress', stealthMetaAddress)
   console.log('viewPublicKey', viewPublicKey)
