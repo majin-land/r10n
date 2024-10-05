@@ -11,7 +11,7 @@ import {
 } from "@fluidkey/stealth-account-kit";
 
 import * as secp from "@noble/secp256k1";
-import { Hex, keccak256 } from "viem";
+import { Hex, keccak256, toHex } from "viem";
 
 import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
 
@@ -227,7 +227,7 @@ export async function generateStealthInfo(
   const viewPublicKey = ("0x" + stealthMetaAddress.slice(75)) as Hex;
 
   // generate random ephemeral private key
-  const ephemeralPrivateKey = randomPrivateKey() as Hex;
+  const ephemeralPrivateKey = toHex(randomPrivateKey());
 
   // generate shared secret
   const sharedSecret = secp.getSharedSecret(

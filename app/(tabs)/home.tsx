@@ -1,11 +1,15 @@
+import 'react-native-get-random-values';
+
 import { useStealthMetaAddress } from '@/context/StealthMetaAddress';
-import { formatStealthMetaAddress } from '@/utils/helper';
-import React, { useState } from 'react';
+import { formatStealthAddress, formatStealthMetaAddress } from '@/utils/helper';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { useQuery } from '@apollo/client';
 import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets';
 import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements';
+import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth';
+import { useWallet } from '@/context/WalletContext';
 
 // Updated activities data
 const activitiesData = [
@@ -15,9 +19,10 @@ const activitiesData = [
 ];
 
 const HomeScreen: React.FC = () => {
+  const { privateKey, walletAddress } = useWallet()
   const { stealthMetaAddress } = useStealthMetaAddress();
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
+  const [stealthAddress, setStealtAddress] = useState<`0x${string}` | null>(null)
   const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
     variables: {}
   })
@@ -35,11 +40,26 @@ const HomeScreen: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
+  const genereteInitialStealthAddress = async () => {
+    try {
+      const stealthInfo = await generateStealthInfo(
+        stealthMetaAddress as `st:eth:0x${string}`
+      );
+      
+      setStealtAddress(stealthInfo.stealthAddress)
+
+      // TODO: Store to storage and publish generated Address
+    } catch(error) {
+      console.log(error.message)
+    }
+  }
+
+  useEffect(() => {
+    genereteInitialStealthAddress()
+  }, [])
+
   // if (loading) return <Text>Loading...</Text>;
   // if (error) return <Text>Error: {error.message}</Text>;
-
-  console.log('Registry --', data)
-  console.log('Announce --', a)
 
   const renderActivity = ({ item }: { item: typeof activitiesData[0] }) => (
     <View style={styles.activityContainer}>
@@ -65,6 +85,12 @@ const HomeScreen: React.FC = () => {
       <Text style={styles.label}>Receive</Text>
       <View style={styles.receiveContainer}>
         <Text style={styles.address}>{formatStealthMetaAddress(stealthMetaAddress as string)}</Text>
+        <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
+          <Text style={styles.copyButtonText}>Copy</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.receiveContainer}>
+        <Text style={styles.address}>{formatStealthAddress(stealthAddress as string)}</Text>
         <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
           <Text style={styles.copyButtonText}>Copy</Text>
         </TouchableOpacity>
