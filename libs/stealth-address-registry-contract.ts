@@ -120,5 +120,5 @@ export const getUsdcBalance = async (address: `0x${string}`) => {
   return contract.read.balanceOf([address]);
 };
 
-export const transferUsdcContract
+// export const transferUsdcContract
 // Create stealth Address store to ERC6538Registry contract

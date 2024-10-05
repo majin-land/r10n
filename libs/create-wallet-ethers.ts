@@ -16,7 +16,6 @@ function randomPrivateKey(): bigint {
   
 
 export const createUserWalletEthers = async () => {
-    
     // Generate random entropy
     const random = randomPrivateKey()
     
@@ -26,7 +25,7 @@ export const createUserWalletEthers = async () => {
     // Combine entropies to form a single entropy hex string
     const entropyHex = entropies.sort().reduce((acc, s) => acc + s.slice(2), '0x')
     const entropy = hkdf(sha256, toBytes(entropyHex), new Uint8Array(32), 'seed', 32)
-    console.log(entropy, 'ssssss')
+
     // Generate BIP39 Seed
     const password = ''
     const encoder = new TextEncoder()

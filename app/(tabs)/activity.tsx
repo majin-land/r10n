@@ -1,24 +1,14 @@
-import { useStealthMetaAddress } from '@/context/StealthMetaAddress';
-import { formatStealthMetaAddress } from '@/utils/helper';
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
-import * as Clipboard from 'expo-clipboard';
+import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
 
-// Updated activities data
 const activitiesData = [
   { id: '1', date: 'October 1, 2024', amount: '400', type: 'received', token: 'USDC' },
   { id: '2', date: 'October 1, 2024', amount: '200', type: 'sent', token: 'USDC' },
   { id: '3', date: 'October 1, 2024', amount: '100', type: 'received', token: 'USDC' },
 ];
 
-const HomeScreen: React.FC = () => {
-  const { stealthMetaAddress } = useStealthMetaAddress();
+const ActivityScreen: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
-
-  const copyToClipboard = async () => {
-    await Clipboard.setStringAsync(stealthMetaAddress as string);
-    Alert.alert("Copied to Clipboard", "Your address has been copied to the clipboard.");
-  };
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -44,21 +34,7 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>R1ON</Text>
-      <Text style={styles.label}>Receive</Text>
-      <View style={styles.receiveContainer}>
-        <Text style={styles.address}>{formatStealthMetaAddress(stealthMetaAddress as string)}</Text>
-        <TouchableOpacity style={styles.copyButton} onPress={copyToClipboard}>
-          <Text style={styles.copyButtonText}>Copy</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.balanceContainer}>
-        <Text style={styles.balanceText}>Balance</Text>
-        <Text style={styles.balanceAmount}>400 USDC</Text>
-      </View>
-
-      <Text style={styles.activitiesLabel}>Activities</Text>
+      <Text style={styles.header}>Activities</Text>
       <FlatList
         data={activitiesData}
         renderItem={renderActivity}
@@ -73,61 +49,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F9F9F9', // light background color
+    backgroundColor: '#F9F9F9',
   },
   header: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
-  },
-  receiveContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#007AFF', // Border color
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: '#E3F2FD', // Light blue background
-  },
-  address: {
-    flex: 1,
-    fontSize: 14,
-    color: '#333',
-  },
-  copyButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    borderRadius: 5,
-    backgroundColor: '#007AFF', // Button color
-  },
-  copyButtonText: {
-    color: '#FFFFFF',
-  },
-  balanceContainer: {
-    marginVertical: 20,
-    padding: 20,
-    borderRadius: 10,
-    backgroundColor: '#BBDEFB', // Light blue
-    alignItems: 'center',
-  },
-  balanceText: {
-    fontSize: 16,
-    color: '#555',
-  },
-  balanceAmount: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  activitiesLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 10,
   },
   activityContainer: {
     marginBottom: 15,
@@ -178,4 +105,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen;
+export default ActivityScreen;

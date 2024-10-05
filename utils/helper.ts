@@ -23,3 +23,13 @@ export function compressPublicKey(publicKey: string): string {
   // Return the compressed public key as a hex string with '0x' prefix
   return "0x" + Buffer.from(compressedPublicKey).toString("hex");
 }
+
+export const formatStealthMetaAddress = (address: string): string => {
+  if (!address) return "";
+
+  // Take the first 8 characters and the last 4 characters of the address
+  const start = address.slice(0, 20);
+  const end = address.slice(-4);
+
+  return `${start}....${end}`;
+};

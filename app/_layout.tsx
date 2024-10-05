@@ -1,12 +1,17 @@
+global.Buffer = require('buffer').Buffer;
+
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import 'react-native-get-random-values';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import React from 'react';
+import { WalletProvider } from '@/context/WalletContext';
+import { StealthMetaAddressProvider } from '@/context/StealthMetaAddress';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -28,12 +33,17 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        {/* <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> */}
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-    </ThemeProvider>
+    
+    <WalletProvider>
+      <StealthMetaAddressProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(auth)/index" options={{ headerShown: false }} /> {/* Connect Wallet Screen */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> {/* Tabs for Home, Transfer, Activity */}
+          <Stack.Screen name="+not-found" />
+          </Stack>
+      </ThemeProvider>
+    </StealthMetaAddressProvider>
+    </WalletProvider>
   );
 }
