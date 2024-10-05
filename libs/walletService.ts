@@ -1,35 +1,29 @@
-// src/libs/walletService.ts
+// Dummy function
 
-// Dummy function to simulate fetching wallet balance
 export const getWalletBalance = async (walletAddress: string): Promise<string> => {
     console.log(`Fetching wallet balance for address: ${walletAddress}`);
-    // Simulate a delay for async call
     return new Promise((resolve) => {
       setTimeout(() => {
-        resolve('2.345 ETH'); // Return a dummy wallet balance
+        resolve('2.345 ETH'); 
       }, 1000);
     });
   };
   
-  // Dummy function to simulate fetching token balances
   export const getTokenBalances = async (walletAddress: string): Promise<Array<{ symbol: string; balance: string }>> => {
     console.log(`Fetching token balances for address: ${walletAddress}`);
-    // Simulate a delay for async call
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([
-          { symbol: 'USDC', balance: '500.00' }, // Dummy USDC balance
-          { symbol: 'DAI', balance: '100.00' },  // Dummy DAI balance
-          { symbol: 'MATIC', balance: '250.12' }, // Dummy MATIC balance
+          { symbol: 'USDC', balance: '500.00' }, 
+          { symbol: 'DAI', balance: '100.00' },
+          { symbol: 'MATIC', balance: '250.12' }, 
         ]);
       }, 1500);
     });
   };
   
-  // Dummy function to simulate fetching activity history
   export const getActivityHistory = async (walletAddress: string): Promise<Array<{ id: string; activity: string; date: string }>> => {
     console.log(`Fetching activity history for address: ${walletAddress}`);
-    // Simulate a delay for async call
     return new Promise((resolve) => {
       setTimeout(() => {
         resolve([
