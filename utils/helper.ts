@@ -1,4 +1,4 @@
-import * as ethers from "ethers";
+import { ethers } from "ethers";
 import * as secp from "@noble/secp256k1";
 
 export function randomPrivateKey() {
