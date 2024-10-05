@@ -136,7 +136,7 @@ const HomeScreen: React.FC = () => {
             style={[styles.tabButton, selectedTab === 'meta' && styles.activeTab]}
             onPress={() => setSelectedTab('meta')}
           >
-            <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>Meta Address</Text>
+            <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>Stealth Meta Address</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.tabButton, selectedTab === 'stealth' && styles.activeTab]}
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     color: '#FFF',
-    fontSize: 14,
+    fontSize: 12,
   },
   activeTabText: {
     color: '#000',
