@@ -250,7 +250,7 @@ export async function generateStealthInfo(
 
   return {
     stealthMetaAddress,
-    stealthAddress: stealthAddresses,
+    stealthAddress: stealthAddresses[0],
     ephemeralPublicKey,
     metadata: viewTag,
   }

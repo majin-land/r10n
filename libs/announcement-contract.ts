@@ -2,19 +2,19 @@ import { createWalletClient, createPublicClient, custom, http } from 'viem'
 import { sepolia, baseSepolia } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { signMessage } from 'viem/wallet'
-import ERC6538RegistryABI from './abi/ERC6538RegistryABI' 
+import ERC6538RegistryABI from './abi/ERC6538RegistryABI'
 import { generateFluidkeyMessage } from '@fluidkey/stealth-account-kit'
 
 const client = createPublicClient({
   chain: baseSepolia,
-  transport: http(),
-});
+  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+})
 
 const walletClient = createWalletClient({
   account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`),
   chain: baseSepolia,
-  transport: http(),
-});
+  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+})
 
 const contractAddress = '0x55649E01B5Df198D18D95b5cc5051630cfD45564'
 
@@ -29,19 +29,22 @@ const contractAddress = '0x55649E01B5Df198D18D95b5cc5051630cfD45564'
 //   console.log('Transaction hash:', hash);
 // }
 
-export async function announce(schemeId: number, stealthAddress: string, ephemeralPubKey: string, metadata: string) {
+export async function announce(
+  schemeId: number,
+  stealthAddress: string,
+  ephemeralPubKey: string,
+  metadata: string,
+) {
   const hash = await walletClient.writeContract({
     address: contractAddress,
     abi: ERC6538RegistryABI,
     functionName: 'registerKeys',
-    args: [schemeId, stealthAddress, ephemeralPubKey, metadata]
+    args: [schemeId, stealthAddress, ephemeralPubKey, metadata],
   })
-  console.log('Transaction hash:', hash);
+  console.log('Transaction hash:', hash)
 
   return hash
 }
-
-
 
 // // Generate a valid signature (you need to adjust this to fit EIP-712)
 // export async function generateSignature() {
@@ -56,7 +59,6 @@ export async function announce(schemeId: number, stealthAddress: string, ephemer
 //   });
 //   return signature;
 // }
-
 
 // export const listenEvent = async () => {
 //   const logs = client.watchEvent({
@@ -86,7 +88,5 @@ export async function announce(schemeId: number, stealthAddress: string, ephemer
 //   // console.log('logs, ', logs)
 //   return logs
 // }
-
-
 
 // Create stealth Address store to ERC6538Registry contract
