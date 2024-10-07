@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import {
   generateStealthMetaAddress,
 } from "@/libs/stealth";
+import { getUsdcBalance } from "@/libs/viem";
 
 // Define the types
 interface StealthMetaAddressContextType {
@@ -12,6 +13,7 @@ interface StealthMetaAddressContextType {
   viewingPublicKey: string | null;
   stealthMetaAddress: string | null;
   retrieveStealthMetaAddress: (privateKey: string, address: string) => Promise<{ stealthMetaAddressAddress: string; privateKey: string } | null>;
+  fetchStealthWalletBalance: () => Promise<number>
 }
 
 const StealthMetaAddressContext = createContext<StealthMetaAddressContextType | undefined>(undefined);
@@ -52,6 +54,33 @@ export const StealthMetaAddressProvider: React.FC<{ children: React.ReactNode }>
     return null;
   }
 
+  const fetchStealthWalletBalance = async () => {
+    const stealthAddresses = [
+      {
+        address: '0x1cF5559B49Ce06F81c1e2C1633833b60e090C04C',
+        ephermalPubKey: '0x'
+      },
+      {
+        address: '0xe8af41abe02c04d40a258729637e5a7c2a6e9d2d',
+        ephermalPubKey: '0x'
+      },
+      {
+        address: '0xa19b49d2783c22d106ae5b551782b21e096c5be8',
+        ephermalPubKey: '0x'
+      },
+      {
+        address: '0xb526f85a1987990a828429b9f1624ef4f7f43863',
+        ephermalPubKey: '0x'
+      }
+    ]
+
+    const balances = await Promise.all(stealthAddresses.map(annoucement => getUsdcBalance(annoucement.address as `0x${string}`)))
+    
+    const countBalances = balances.reduce((crr, ac) => crr + ac , 0)
+    console.log(countBalances, 'sss')
+    return countBalances
+  }
+
   return (
     <StealthMetaAddressContext.Provider
       value={{
@@ -61,6 +90,7 @@ export const StealthMetaAddressProvider: React.FC<{ children: React.ReactNode }>
         viewingPublicKey,
         stealthMetaAddress,
         retrieveStealthMetaAddress,
+        fetchStealthWalletBalance,
       }}
     >
       {children}

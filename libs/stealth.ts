@@ -7,7 +7,7 @@ import {
   generateStealthPrivateKey,
   predictStealthSafeAddressWithBytecode,
   predictStealthSafeAddressWithClient,
-  generateFluidkeyMessage,
+  generateFluidkeyMessage
 } from "@fluidkey/stealth-account-kit";
 
 import * as secp from "@noble/secp256k1";

@@ -50,7 +50,7 @@ const activitiesData = [
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress, clearWallet } = useWallet()
-  const { stealthMetaAddress, spendingPublicKey, viewingPublicKey } = useStealthMetaAddress()
+  const { stealthMetaAddress, spendingPublicKey, viewingPublicKey, fetchStealthWalletBalance } = useStealthMetaAddress()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
@@ -58,6 +58,8 @@ const HomeScreen: React.FC = () => {
 
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
+ 
+  const [userBalanceUsdc, setUserBalanceUsdc] = useState<string>()
 
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta');
 
@@ -74,14 +76,13 @@ const HomeScreen: React.FC = () => {
   const fetchMainBalance = async () => {
     const userBalance = await getUserBalance(walletAddress as `0x${string}`)
     const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
-    console.log(usdcBalance, 'ssssssss')
-    console.log(formatEther(userBalance), 'ssssssss')
+    const stealthWalletbalance = await fetchStealthWalletBalance()
+
+    setUserBalanceUsdc(String(stealthWalletbalance))
+
     setMainBalanceUsdc(String(usdcBalance))
     setMainBalance(formatEther(userBalance))
   }
-
-  // console.log('announcements', a)
-  // console.log('registry', data)
 
   const copyToClipboard = async (address: string) => {
     await Clipboard.setStringAsync(address);
@@ -97,9 +98,9 @@ const HomeScreen: React.FC = () => {
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
-      console.log(stealthInfo.stealthAddress, 'stealth address')
-
-      setStealthAddress(stealthInfo.stealthAddress as unknown as `0x${string}`)
+      console.log(stealthInfo.stealthAddress[0] , 'stealthAddress')
+      
+      setStealthAddress(stealthInfo.stealthAddress[0])
 
       // TODO: Store to storage and publish generated Address
     } catch (error) {
@@ -155,7 +156,7 @@ const HomeScreen: React.FC = () => {
       <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
         <View style={styles.mainWalletbalance}>
           <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
-          <Text style={styles.balanceText}>{mainBalanceUsdc || 0} ETH</Text>
+          <Text style={styles.balanceText}>{mainBalanceUsdc || 0} USDC</Text>
         </View>
         <Text style={styles.text}>{walletAddress}</Text>
       </LinearGradient>
@@ -201,7 +202,7 @@ const HomeScreen: React.FC = () => {
       </View>
       <LinearGradient colors={['#4ca1af', '#007AFF']} style={styles.balanceContainer}>
         <Text style={styles.balanceText}>Balance</Text>
-        <Text style={styles.balanceAmount}>400 USDC</Text>
+        <Text style={styles.balanceAmount}>{userBalanceUsdc || 0} USDC</Text>
       </LinearGradient>
       <TouchableOpacity style={styles.clearButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
         <Text style={styles.clearButtonText}>Reset keys</Text>

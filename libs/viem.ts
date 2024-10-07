@@ -1,16 +1,15 @@
 import {
   createWalletClient,
   createPublicClient,
-  custom,
   http,
-  getContract,
   erc20Abi,
-  parseUnits,
 } from "viem"
 import { sepolia, baseSepolia } from "viem/chains"
 import { privateKeyToAccount } from "viem/accounts"
 import ERC6538RegistryABI from "./abi/ERC6538RegistryABI"
 import { generateFluidkeyMessage } from "@fluidkey/stealth-account-kit"
+
+const USDC_TOKEN_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export const client = createPublicClient({
   chain: baseSepolia,
@@ -45,7 +44,7 @@ export const getUserBalance = async (address: `0x${string}`) => {
 // get usdc balance
 export const getUsdcBalance = async (address: `0x${string}`) => {
   const balance = await client.readContract({
-    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+    address: USDC_TOKEN_ADDRESS,
     abi: erc20Abi,
     functionName: 'balanceOf',
     args: [address],
@@ -82,21 +81,23 @@ export const getUsdcBalance = async (address: `0x${string}`) => {
 
 export const transferUsdc = async (to: `0x${string}`, amountInUSDC: number, privateKey: `0x${string}`) => {
   // Convert the amount to the smallest unit (since USDC has 6 decimals)
-  const amount = BigInt(amountInUSDC * 1e6); // 1 USDC = 10^6 micro USDC
+  const amount = BigInt(amountInUSDC * 1e6)  // 1 USDC = 10^6 micro USDC
+  // TODO: refactor logic for private key
+  const account = privateKeyToAccount(privateKey)
 
   const walletClient = createWalletClient({
-    account: privateKeyToAccount(privateKey),
+    account,
     chain: baseSepolia,
     transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
   })
 
   // Call the `transfer` function on the USDC contract
   const txHash = await walletClient.writeContract({
-    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC contract address
+    address: USDC_TOKEN_ADDRESS, // USDC contract address
     abi: erc20Abi,
     functionName: 'transfer',
     args: [to, amount], // Arguments for `transfer(to, amount)`
-    account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`), // Sender account
+    account
   });
 
   console.log('Transaction Hash:', txHash);
