@@ -2,7 +2,7 @@ import 'react-native-get-random-values'
 
 import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
 import { formatStealthAddress, formatStealthMetaAddress } from '@/utils/helper'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import {
   View,
   Text,
@@ -21,7 +21,23 @@ import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
 import { getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
 import { formatEther } from 'viem'
-import { LinearGradient } from 'expo-linear-gradient';
+import { LinearGradient } from 'expo-linear-gradient'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import { generateStealthPrivateKey } from '@fluidkey/stealth-account-kit'
+import { Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+
+type announcementType = {
+  __typename: 'Announcement' | string
+  block_number: string
+  ephemeralPubKey: Hex | string
+  id: string | Hex
+  metadata: string | Hex
+  schemeId: string
+  stealthAddress: Hex | string
+  timestamp_: string
+  transactionHash_: string | Hex
+}
 
 // Updated activities data
 const activitiesData = [
@@ -50,7 +66,12 @@ const activitiesData = [
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress, clearWallet } = useWallet()
-  const { stealthMetaAddress, spendingPublicKey, viewingPublicKey } = useStealthMetaAddress()
+  const {
+    stealthMetaAddress,
+    spendingPublicKey,
+    viewingPublicKey,
+    spendingPrivateKey,
+  } = useStealthMetaAddress()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
@@ -59,16 +80,17 @@ const HomeScreen: React.FC = () => {
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
 
-  const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta');
+  const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta')
+  const [blockNumber, setBlockNumber] = useState('14282482')
+  const [stealthAddresses, setStealthAddresses] = useState([])
 
-  const router = useRouter(); 
+  const router = useRouter()
 
   const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
     variables: {},
   })
-
-  const { data: a } = useQuery(GET_ANNOUNCEMENTS, {
-    variables: {},
+  const { data: queryAnnouncements } = useQuery(GET_ANNOUNCEMENTS, {
+    variables: { blockNumber: blockNumber },
   })
 
   const fetchMainBalance = async () => {
@@ -79,14 +101,12 @@ const HomeScreen: React.FC = () => {
     setMainBalanceUsdc(String(usdcBalance))
     setMainBalance(formatEther(userBalance))
   }
-
-  // console.log('announcements', a)
   // console.log('registry', data)
 
   const copyToClipboard = async (address: string) => {
-    await Clipboard.setStringAsync(address);
-    alert('Copied to Clipboard');
-  };
+    await Clipboard.setStringAsync(address)
+    alert('Copied to Clipboard')
+  }
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id)
@@ -103,14 +123,100 @@ const HomeScreen: React.FC = () => {
 
       // TODO: Store to storage and publish generated Address
     } catch (error) {
-      const err = error instanceof Error ? JSON.parse(JSON.stringify(error)) : String(error)
+      const err =
+        error instanceof Error
+          ? JSON.parse(JSON.stringify(error))
+          : String(error)
       console.error(err)
+    }
+  }
+
+  const storeAnnouncements = async (announcements: any) => {
+    const latestBlockNumber = announcements[0].block_number
+
+    // store to async storage
+    try {
+      console.log(latestBlockNumber, 'Latest Block Number') // log the latest block number
+      await AsyncStorage.setItem('latestBlockNumber', latestBlockNumber)
+
+      setBlockNumber(latestBlockNumber)
+    } catch (error) {
+      console.error('Error storing latestBlockNumber', error)
+    }
+
+    announcements.map(async (announcement) => {
+      const { stealthAddress, ephemeralPubKey } = announcement
+
+      // Generate stealth private key from ephemeral public key
+      const { stealthPrivateKey } = generateStealthPrivateKey({
+        spendingPrivateKey: spendingPrivateKey as Hex,
+        ephemeralPublicKey: ephemeralPubKey as Hex,
+      })
+
+      // get the stealth address
+      const stealthAccount = privateKeyToAccount(stealthPrivateKey)
+      const generatedStealthAddress = stealthAccount.address
+
+      // check generated stealth address === stealth address from contract
+      if (stealthAddress === generatedStealthAddress) {
+        try {
+          // check if current exist announcements storage
+          const storedAnnouncements = await AsyncStorage.getItem(
+            '@announcements',
+          )
+          const currentAnnouncements = storedAnnouncements
+            ? JSON.parse(storedAnnouncements)
+            : []
+
+          // Merge the new announcements with the current ones
+          const updatedAnnouncements = [
+            ...currentAnnouncements,
+            ...announcement,
+          ]
+          // store the announcement
+          await AsyncStorage.setItem(
+            '@announcements',
+            JSON.stringify(updatedAnnouncements),
+          )
+
+          console.log('Announcements updated successfully!')
+        } catch (e) {
+          console.error('Failed to update announcements:', e)
+        }
+      }
+    })
+    console.log(announcements, 'DATA Announcements')
+  }
+
+  const retrieveAnnouncements = async () => {
+    try {
+      const storedAnnouncements = await AsyncStorage.getItem('@announcements')
+      const parsedStoredAnnouncements =
+        storedAnnouncements != null ? JSON.parse(storedAnnouncements) : []
+      if (storedAnnouncements) {
+        setStealthAddresses(JSON.parse(parsedStoredAnnouncements))
+      }
+    } catch (e) {
+      console.error('Failed to retrieve announcements:', e)
+    }
+  }
+
+  const getStoredLatestBlockNumber = async () => {
+    const storedLatestAnnouncementsBlockNumber = await AsyncStorage.getItem(
+      'latestBlockNumber',
+    )
+
+    if (storedLatestAnnouncementsBlockNumber) {
+      setBlockNumber(storedLatestAnnouncementsBlockNumber)
     }
   }
 
   useEffect(() => {
     generateInitialStealthAddress()
-  }, [])
+    storeAnnouncements(queryAnnouncements.announcements)
+    getStoredLatestBlockNumber()
+    retrieveAnnouncements()
+  }, [queryAnnouncements])
 
   useEffect(() => {
     fetchMainBalance()
@@ -149,10 +255,11 @@ const HomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>R1ON</Text>
-      <Text style={styles.label}>
-        Main Wallet
-      </Text>
-      <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
+      <Text style={styles.label}>Main Wallet</Text>
+      <LinearGradient
+        colors={['#4ca1af', '#c4e0e5']}
+        style={styles.balanceCard}
+      >
         <View style={styles.mainWalletbalance}>
           <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
           <Text style={styles.balanceText}>{mainBalanceUsdc || 0} ETH</Text>
@@ -163,16 +270,36 @@ const HomeScreen: React.FC = () => {
       <View style={styles.tabWrapper}>
         <View style={styles.tabContainer}>
           <TouchableOpacity
-            style={[styles.tabButton, selectedTab === 'meta' && styles.activeTab]}
+            style={[
+              styles.tabButton,
+              selectedTab === 'meta' && styles.activeTab,
+            ]}
             onPress={() => setSelectedTab('meta')}
           >
-            <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>Stealth Meta Address</Text>
+            <Text
+              style={[
+                styles.tabText,
+                selectedTab === 'meta' && styles.activeTabText,
+              ]}
+            >
+              Stealth Meta Address
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.tabButton, selectedTab === 'stealth' && styles.activeTab]}
+            style={[
+              styles.tabButton,
+              selectedTab === 'stealth' && styles.activeTab,
+            ]}
             onPress={() => setSelectedTab('stealth')}
           >
-            <Text style={[styles.tabText, selectedTab === 'stealth' && styles.activeTabText]}>Stealth Address</Text>
+            <Text
+              style={[
+                styles.tabText,
+                selectedTab === 'stealth' && styles.activeTabText,
+              ]}
+            >
+              Stealth Address
+            </Text>
           </TouchableOpacity>
         </View>
         {selectedTab === 'meta' ? (
@@ -199,18 +326,34 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
       </View>
-      <LinearGradient colors={['#4ca1af', '#007AFF']} style={styles.balanceContainer}>
+      <LinearGradient
+        colors={['#4ca1af', '#007AFF']}
+        style={styles.balanceContainer}
+      >
         <Text style={styles.balanceText}>Balance</Text>
         <Text style={styles.balanceAmount}>400 USDC</Text>
       </LinearGradient>
-      <TouchableOpacity style={styles.clearButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
+      <TouchableOpacity
+        style={styles.clearButton}
+        onPress={() => clearWallet().then(() => router.replace('/'))}
+      >
         <Text style={styles.clearButtonText}>Reset keys</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.successButton} onPress={() => transferUsdc(stealthAddress as `0x${string}`, 1, privateKey as `0x${string}`).then(console.log).catch(console.log)}>
+
+      <TouchableOpacity
+        style={styles.successButton}
+        onPress={() =>
+          transferUsdc(
+            stealthAddress as `0x${string}`,
+            1,
+            privateKey as `0x${string}`,
+          )
+            .then(console.log)
+            .catch(console.log)
+        }
+      >
         <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
       </TouchableOpacity>
-      
 
       <Text style={styles.activitiesLabel}>Activities</Text>
       <FlatList
@@ -334,17 +477,17 @@ const styles = StyleSheet.create({
   },
   resetButton: {
     marginTop: 16,
-    marginBottom: 16
+    marginBottom: 16,
   },
   clearButton: {
-    backgroundColor: "#FF5252",
+    backgroundColor: '#FF5252',
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
     marginTop: 20,
   },
   successButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: '#4CAF50',
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -352,9 +495,9 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 16,
-    color: "#FFF",
-    fontWeight: "600",
-    textAlign: "center",
+    color: '#FFF',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   tabContainer: {
     flexDirection: 'row',
@@ -390,7 +533,7 @@ const styles = StyleSheet.create({
   },
   tabWrapper: {
     backgroundColor: '#fff',
-    padding: 4
+    padding: 4,
   },
   text: {
     fontSize: 16,
@@ -403,8 +546,8 @@ const styles = StyleSheet.create({
   },
   mainWalletbalance: {
     flexDirection: 'row',
-    justifyContent: 'space-between'
-  }
+    justifyContent: 'space-between',
+  },
 })
 
 export default HomeScreen

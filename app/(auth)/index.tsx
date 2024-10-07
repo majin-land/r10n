@@ -1,49 +1,76 @@
-import React, { useEffect } from "react";
-import { useWallet } from "@/context/WalletContext";
-import { createUserWalletEthers } from "@/libs/create-wallet-ethers";
-import { View, Button, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { useNavigation, useRouter } from 'expo-router';
-import { useStealthMetaAddress } from "@/context/StealthMetaAddress";
+import React, { useEffect } from 'react'
+import { useWallet } from '@/context/WalletContext'
+import { createUserWalletEthers } from '@/libs/create-wallet-ethers'
+import { View, Button, Text, StyleSheet, TouchableOpacity } from 'react-native'
+import { useNavigation, useRouter } from 'expo-router'
+import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
+import { generateStealthMetaAddress } from '@/libs/stealth'
+import { Hex } from 'viem'
 
 const WalletScreen: React.FC = () => {
-  const { walletAddress, privateKey, storeWallet, retrieveWallet, clearWallet, bib32RootKey } = useWallet();
-  const { retrieveStealthMetaAddress } = useStealthMetaAddress()
-  const router = useRouter(); 
+  const {
+    walletAddress,
+    privateKey,
+    storeWallet,
+    retrieveWallet,
+    clearWallet,
+    bib32RootKey,
+  } = useWallet()
+  const { storeStealthMetaAddress, retrieveStealthMetaAddress } =
+    useStealthMetaAddress()
+  const router = useRouter()
 
-  const navigation = useNavigation();
+  const navigation = useNavigation()
 
   useEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, [navigation]);
+    navigation.setOptions({ headerShown: false })
+  }, [navigation])
 
   const handleCreateWallet = async () => {
     // Check if a wallet already exists
-    const existingWallet = await retrieveWallet();
+    const existingWallet = await retrieveWallet()
 
     // If a wallet exists, use its details
     if (existingWallet) {
-      const { walletAddress, privateKey } = existingWallet;
-      await retrieveStealthMetaAddress(privateKey, walletAddress);
-      router.replace('/home');
-      return;
+      await retrieveStealthMetaAddress()
+      router.replace('/home')
+      return
     }
-  
+
     // Otherwise, create a new wallet
     const createNewWallet = async () => {
-      const result = await createUserWalletEthers();
-      const { address, privateKey } = result.accounts[0];
-      const bip32RootKey = result.bip32RootKey;
-  
-      await storeWallet(address, privateKey, bip32RootKey);
-      return { address, privateKey };
-    };
-    
+      const result = await createUserWalletEthers()
+      const { address, privateKey } = result.accounts[0]
+      const bip32RootKey = result.bip32RootKey
+
+      await storeWallet(address, privateKey, bip32RootKey)
+      return { address, privateKey }
+    }
+
     // Create the new wallet and proceed with its details
-    const { address: newAddress, privateKey: newPrivateKey } = await createNewWallet();
-    await retrieveStealthMetaAddress(newPrivateKey, newAddress);
-  
-    router.replace('/home');
-  };
+    const { address: newAddress, privateKey: newPrivateKey } =
+      await createNewWallet()
+    const {
+      stealthMetaAddress,
+      spendingPrivateKey,
+      viewingPrivateKey,
+      spendingPublicKey,
+      viewingPublicKey,
+    } = await generateStealthMetaAddress({
+      userPrivateKey: newPrivateKey as Hex,
+      userPin: '1234',
+      userAddress: newAddress,
+    })
+    await storeStealthMetaAddress({
+      stealthMetaAddress,
+      spendingPrivateKey,
+      viewingPrivateKey,
+      spendingPublicKey,
+      viewingPublicKey,
+    })
+
+    router.replace('/home')
+  }
 
   return (
     <View style={styles.container}>
@@ -65,65 +92,68 @@ const WalletScreen: React.FC = () => {
       ) : (
         <View style={styles.connectContainer}>
           <Text style={styles.connectMessage}>No wallet connected</Text>
-          <TouchableOpacity style={styles.connectButton} onPress={handleCreateWallet}>
+          <TouchableOpacity
+            style={styles.connectButton}
+            onPress={handleCreateWallet}
+          >
             <Text style={styles.connectButtonText}>Connect Wallet</Text>
           </TouchableOpacity>
         </View>
       )}
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    justifyContent: "center",
-    backgroundColor: "#F5F5F5",
+    justifyContent: 'center',
+    backgroundColor: '#F5F5F5',
   },
   walletInfo: {
-    backgroundColor: "#FFF",
+    backgroundColor: '#FFF',
     padding: 20,
     borderRadius: 10,
-    shadowColor: "#000",
+    shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 10,
     elevation: 2,
   },
   label: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#333",
+    fontWeight: '600',
+    color: '#333',
     marginBottom: 8,
   },
   value: {
     fontSize: 14,
-    color: "#555",
+    color: '#555',
     marginBottom: 16,
   },
   connectContainer: {
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   connectMessage: {
     fontSize: 18,
-    fontWeight: "500",
-    color: "#888",
+    fontWeight: '500',
+    color: '#888',
     marginBottom: 20,
   },
   connectButton: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: '#4CAF50',
     paddingVertical: 12,
     paddingHorizontal: 32,
     borderRadius: 8,
   },
   connectButtonText: {
     fontSize: 16,
-    color: "#FFF",
-    fontWeight: "600",
+    color: '#FFF',
+    fontWeight: '600',
   },
   clearButton: {
-    backgroundColor: "#FF5252",
+    backgroundColor: '#FF5252',
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -131,10 +161,10 @@ const styles = StyleSheet.create({
   },
   clearButtonText: {
     fontSize: 16,
-    color: "#FFF",
-    fontWeight: "600",
-    textAlign: "center",
+    color: '#FFF',
+    fontWeight: '600',
+    textAlign: 'center',
   },
-});
+})
 
-export default WalletScreen;
+export default WalletScreen
