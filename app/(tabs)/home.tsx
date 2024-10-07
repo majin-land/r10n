@@ -147,14 +147,11 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
-      console.log('00000000')
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
-      console.log(stealthInfo.stealthAddress[0] , 'stealthAddress')
       
       setStealthAddress(stealthInfo.stealthAddress[0])
-      console.log('00000000')
       // TODO: Store to storage and publish generated Address
     } catch (error) {
       const err =
