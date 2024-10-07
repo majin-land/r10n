@@ -86,15 +86,15 @@ const HomeScreen: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta')
   const [blockNumber, setBlockNumber] = useState('14282482')
   const [stealthAddresses, setStealthAddresses] = useState([])
-
   const router = useRouter()
 
-  const { data, loading, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
+  const { data, loading: isFetchStealthAddress, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
     variables: {},
   })
-  const { data: queryAnnouncements } = useQuery(GET_ANNOUNCEMENTS, {
+  const { data: queryAnnouncements, loading: isFetchAnnoucement, } = useQuery(GET_ANNOUNCEMENTS, {
     variables: { blockNumber: blockNumber },
   })
+
 
   const fetchMainBalance = async () => {
     const userBalance = await getUserBalance(walletAddress as `0x${string}`)
@@ -223,10 +223,12 @@ const HomeScreen: React.FC = () => {
   }
 
   useEffect(() => {
-    generateInitialStealthAddress()
-    storeAnnouncements(queryAnnouncements.announcements)
-    getStoredLatestBlockNumber()
-    retrieveAnnouncements()
+    if (queryAnnouncements) {
+      generateInitialStealthAddress()
+      storeAnnouncements(queryAnnouncements.announcements)
+      getStoredLatestBlockNumber()
+      retrieveAnnouncements()
+    }
   }, [queryAnnouncements])
 
   useEffect(() => {
@@ -235,6 +237,7 @@ const HomeScreen: React.FC = () => {
 
   // if (loading) return <Text>Loading...</Text>;
   // if (error) return <Text>Error: {error.message}</Text>;
+  if (isFetchAnnoucement && isFetchStealthAddress) return <Text>Loading ...</Text>
 
   const renderActivity = ({ item }: { item: (typeof activitiesData)[0] }) => (
     <View style={styles.activityContainer}>

@@ -172,7 +172,7 @@ export const StealthMetaAddressProvider: React.FC<{
     const balances = await Promise.all(stealthAddresses.map(annoucement => getUsdcBalance(annoucement.address as `0x${string}`)))
     
     const countBalances = balances.reduce((crr, ac) => crr + ac , 0)
-    console.log(countBalances, 'sss')
+
     return countBalances
   }
 
