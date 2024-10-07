@@ -19,7 +19,7 @@ import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
 import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
-import { getUsdcBalance, getUserBalance } from '@/libs/viem'
+import { getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
 import { formatEther } from 'viem'
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -76,7 +76,7 @@ const HomeScreen: React.FC = () => {
     const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
     console.log(usdcBalance, 'ssssssss')
     console.log(formatEther(userBalance), 'ssssssss')
-
+    setMainBalanceUsdc(String(usdcBalance))
     setMainBalance(formatEther(userBalance))
   }
 
@@ -94,7 +94,6 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
-      console.log('---------')
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
@@ -154,7 +153,10 @@ const HomeScreen: React.FC = () => {
         Main Wallet
       </Text>
       <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
-        <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
+        <View style={styles.mainWalletbalance}>
+          <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
+          <Text style={styles.balanceText}>{mainBalanceUsdc || 0} ETH</Text>
+        </View>
         <Text style={styles.text}>{walletAddress}</Text>
       </LinearGradient>
       <Text style={styles.label}>Receive</Text>
@@ -205,7 +207,7 @@ const HomeScreen: React.FC = () => {
         <Text style={styles.clearButtonText}>Reset keys</Text>
       </TouchableOpacity>
       
-      <TouchableOpacity style={styles.successButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
+      <TouchableOpacity style={styles.successButton} onPress={() => transferUsdc(stealthAddress as `0x${string}`, 1, privateKey as `0x${string}`).then(console.log).catch(console.log)}>
         <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
       </TouchableOpacity>
       
@@ -399,6 +401,10 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: 20,
   },
+  mainWalletbalance: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  }
 })
 
 export default HomeScreen
