@@ -13,6 +13,7 @@ import React from 'react';
 import { WalletProvider } from '@/context/WalletContext';
 import { StealthMetaAddressProvider } from '@/context/StealthMetaAddress';
 import ApolloProviderApps from '@/apollo';
+import { StatusBar } from 'react-native';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -37,6 +38,7 @@ export default function RootLayout() {
     <ApolloProviderApps>
       <WalletProvider>
         <StealthMetaAddressProvider>
+        <StatusBar barStyle="light-content" backgroundColor="#007AFF" translucent={true} />
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <Stack>
             <Stack.Screen name="(auth)/index" options={{ headerShown: false }} /> {/* Connect Wallet Screen */}

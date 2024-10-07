@@ -10,7 +10,6 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  Button,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
@@ -26,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { generateStealthPrivateKey } from '@fluidkey/stealth-account-kit'
 import { Hex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 type announcementType = {
   __typename: 'Announcement' | string
@@ -62,6 +62,34 @@ const activitiesData = [
     type: 'received',
     token: 'USDC',
   },
+  {
+    id: '4',
+    date: 'October 1, 2024',
+    amount: '100',
+    type: 'received',
+    token: 'USDC',
+  },
+  {
+    id: '5',
+    date: 'October 1, 2024',
+    amount: '100',
+    type: 'received',
+    token: 'USDC',
+  },
+  {
+    id: '6',
+    date: 'October 1, 2024',
+    amount: '100',
+    type: 'received',
+    token: 'USDC',
+  },
+  {
+    id: '7',
+    date: 'October 1, 2024',
+    amount: '100',
+    type: 'received',
+    token: 'USDC',
+  },
 ]
 
 const HomeScreen: React.FC = () => {
@@ -78,6 +106,7 @@ const HomeScreen: React.FC = () => {
     null,
   )
 
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
  
@@ -109,7 +138,7 @@ const HomeScreen: React.FC = () => {
 
   const copyToClipboard = async (address: string) => {
     await Clipboard.setStringAsync(address)
-    alert('Copied to Clipboard')
+    Alert.alert('Copied to Clipboard')
   }
 
   const toggleExpand = (id: string) => {
@@ -118,20 +147,21 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
+      console.log('00000000')
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
       console.log(stealthInfo.stealthAddress[0] , 'stealthAddress')
       
       setStealthAddress(stealthInfo.stealthAddress[0])
-
+      console.log('00000000')
       // TODO: Store to storage and publish generated Address
     } catch (error) {
       const err =
         error instanceof Error
           ? JSON.parse(JSON.stringify(error))
           : String(error)
-      console.error(err)
+      console.error('error:', err)
     }
   }
 
@@ -267,116 +297,106 @@ const HomeScreen: React.FC = () => {
   )
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>R1ON</Text>
-      <Text style={styles.label}>Main Wallet</Text>
-      <LinearGradient
-        colors={['#4ca1af', '#c4e0e5']}
-        style={styles.balanceCard}
-      >
-        <View style={styles.mainWalletbalance}>
-          <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
-          <Text style={styles.balanceText}>{mainBalanceUsdc || 0} USDC</Text>
-        </View>
-        <Text style={styles.text}>{walletAddress}</Text>
-      </LinearGradient>
-      <Text style={styles.label}>Receive</Text>
-      <View style={styles.tabWrapper}>
-        <View style={styles.tabContainer}>
+    <SafeAreaView  style={styles.container}>
+    <FlatList
+      data={activitiesData}
+      renderItem={renderActivity}
+      keyExtractor={(item) => item.id}
+      refreshing={isRefreshing}
+      onRefresh={async () => {
+        Promise.all([
+          generateInitialStealthAddress(),
+          storeAnnouncements(queryAnnouncements.announcements),
+          getStoredLatestBlockNumber(),
+          retrieveAnnouncements(),
+          fetchMainBalance(),
+        ]).then(() => setIsRefreshing(false))
+      }}
+      ListHeaderComponent={
+        <>
+          <Text style={styles.header}>R1ON</Text>
+          <Text style={styles.label}>Main Wallet</Text>
+          <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
+            <View style={styles.mainWalletbalance}>
+              <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
+              <Text style={styles.balanceText}>{mainBalanceUsdc || 0} USDC</Text>
+            </View>
+            <Text style={styles.text}>{walletAddress}</Text>
+          </LinearGradient>
+          <Text style={styles.label}>Receive</Text>
+          <View style={styles.tabWrapper}>
+            <View style={styles.tabContainer}>
+              <TouchableOpacity
+                style={[styles.tabButton, selectedTab === 'meta' && styles.activeTab]}
+                onPress={() => setSelectedTab('meta')}
+              >
+                <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>
+                  Stealth Meta Address
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tabButton, selectedTab === 'stealth' && styles.activeTab]}
+                onPress={() => setSelectedTab('stealth')}
+              >
+                <Text style={[styles.tabText, selectedTab === 'stealth' && styles.activeTabText]}>
+                  Stealth Address
+                </Text>
+              </TouchableOpacity>
+            </View>
+            {selectedTab === 'meta' ? (
+              <View style={styles.addressContainer}>
+                <Text style={styles.address}>
+                  {formatStealthMetaAddress(stealthMetaAddress || '')}
+                </Text>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => copyToClipboard(stealthMetaAddress || '')}
+                >
+                  <Text style={styles.copyButtonText}>Copy</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.addressContainer}>
+                <Text style={styles.address}>{stealthAddress}</Text>
+                <TouchableOpacity
+                  style={styles.copyButton}
+                  onPress={() => copyToClipboard(stealthAddress || '')}
+                >
+                  <Text style={styles.copyButtonText}>Copy</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+          <LinearGradient colors={['#4ca1af', '#007AFF']} style={styles.balanceContainer}>
+            <Text style={styles.balanceText}>Balance</Text>
+            <Text style={styles.balanceAmount}>{userBalanceUsdc || 0} USDC</Text>
+          </LinearGradient>
           <TouchableOpacity
-            style={[
-              styles.tabButton,
-              selectedTab === 'meta' && styles.activeTab,
-            ]}
-            onPress={() => setSelectedTab('meta')}
+            style={styles.clearButton}
+            onPress={() => clearWallet().then(() => router.replace('/'))}
           >
-            <Text
-              style={[
-                styles.tabText,
-                selectedTab === 'meta' && styles.activeTabText,
-              ]}
-            >
-              Stealth Meta Address
-            </Text>
+            <Text style={styles.clearButtonText}>Reset keys</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[
-              styles.tabButton,
-              selectedTab === 'stealth' && styles.activeTab,
-            ]}
-            onPress={() => setSelectedTab('stealth')}
+            style={styles.successButton}
+            onPress={() =>
+              transferUsdc(
+                stealthAddress as `0x${string}`,
+                1,
+                privateKey as `0x${string}`,
+              )
+                .then(console.log)
+                .catch(console.log)
+            }
           >
-            <Text
-              style={[
-                styles.tabText,
-                selectedTab === 'stealth' && styles.activeTabText,
-              ]}
-            >
-              Stealth Address
-            </Text>
+            <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
           </TouchableOpacity>
-        </View>
-        {selectedTab === 'meta' ? (
-          <View style={styles.addressContainer}>
-            <Text style={styles.address}>
-              {formatStealthMetaAddress(stealthMetaAddress || '')}
-            </Text>
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => copyToClipboard(stealthMetaAddress || '')}
-            >
-              <Text style={styles.copyButtonText}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.addressContainer}>
-            <Text style={styles.address}>{stealthAddress}</Text>
-            <TouchableOpacity
-              style={styles.copyButton}
-              onPress={() => copyToClipboard(stealthAddress || '')}
-            >
-              <Text style={styles.copyButtonText}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-      <LinearGradient
-        colors={['#4ca1af', '#007AFF']}
-        style={styles.balanceContainer}
-      >
-        <Text style={styles.balanceText}>Balance</Text>
-        <Text style={styles.balanceAmount}>{userBalanceUsdc || 0} USDC</Text>
-      </LinearGradient>
-      <TouchableOpacity
-        style={styles.clearButton}
-        onPress={() => clearWallet().then(() => router.replace('/'))}
-      >
-        <Text style={styles.clearButtonText}>Reset keys</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.successButton}
-        onPress={() =>
-          transferUsdc(
-            stealthAddress as `0x${string}`,
-            1,
-            privateKey as `0x${string}`,
-          )
-            .then(console.log)
-            .catch(console.log)
-        }
-      >
-        <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.activitiesLabel}>Activities</Text>
-      <FlatList
-        data={activitiesData}
-        renderItem={renderActivity}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+          <Text style={styles.activitiesLabel}>Activities</Text>
+        </>
+      }
+      showsVerticalScrollIndicator={false}
+    />
+    </SafeAreaView>
   )
 }
 
