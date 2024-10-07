@@ -19,6 +19,9 @@ import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
 import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
+import { getUsdcBalance, getUserBalance } from '@/libs/viem'
+import { formatEther } from 'viem'
+import { LinearGradient } from 'expo-linear-gradient';
 
 // Updated activities data
 const activitiesData = [
@@ -52,6 +55,10 @@ const HomeScreen: React.FC = () => {
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
+
+  const [mainBalance, setMainBalance] = useState<string>()
+  const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
+
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta');
 
   const router = useRouter(); 
@@ -63,6 +70,15 @@ const HomeScreen: React.FC = () => {
   const { data: a } = useQuery(GET_ANNOUNCEMENTS, {
     variables: {},
   })
+
+  const fetchMainBalance = async () => {
+    const userBalance = await getUserBalance(walletAddress as `0x${string}`)
+    const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
+    console.log(usdcBalance, 'ssssssss')
+    console.log(formatEther(userBalance), 'ssssssss')
+
+    setMainBalance(formatEther(userBalance))
+  }
 
   // console.log('announcements', a)
   // console.log('registry', data)
@@ -78,6 +94,7 @@ const HomeScreen: React.FC = () => {
 
   const generateInitialStealthAddress = async () => {
     try {
+      console.log('---------')
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
@@ -95,6 +112,10 @@ const HomeScreen: React.FC = () => {
   useEffect(() => {
     generateInitialStealthAddress()
   }, [])
+
+  useEffect(() => {
+    fetchMainBalance()
+  }, [walletAddress])
 
   // if (loading) return <Text>Loading...</Text>;
   // if (error) return <Text>Error: {error.message}</Text>;
@@ -129,6 +150,13 @@ const HomeScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <Text style={styles.header}>R1ON</Text>
+      <Text style={styles.label}>
+        Main Wallet
+      </Text>
+      <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
+        <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
+        <Text style={styles.text}>{walletAddress}</Text>
+      </LinearGradient>
       <Text style={styles.label}>Receive</Text>
       <View style={styles.tabWrapper}>
         <View style={styles.tabContainer}>
@@ -169,15 +197,19 @@ const HomeScreen: React.FC = () => {
           </View>
         )}
       </View>
-
-      <View style={styles.balanceContainer}>
+      <LinearGradient colors={['#4ca1af', '#007AFF']} style={styles.balanceContainer}>
         <Text style={styles.balanceText}>Balance</Text>
         <Text style={styles.balanceAmount}>400 USDC</Text>
-      </View>
+      </LinearGradient>
       <TouchableOpacity style={styles.clearButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
         <Text style={styles.clearButtonText}>Reset keys</Text>
       </TouchableOpacity>
       
+      <TouchableOpacity style={styles.successButton} onPress={() => clearWallet().then(() => router.replace('/'))}>
+        <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
+      </TouchableOpacity>
+      
+
       <Text style={styles.activitiesLabel}>Activities</Text>
       <FlatList
         data={activitiesData}
@@ -309,6 +341,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginTop: 20,
   },
+  successButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    marginTop: 20,
+  },
   clearButtonText: {
     fontSize: 16,
     color: "#FFF",
@@ -350,7 +389,16 @@ const styles = StyleSheet.create({
   tabWrapper: {
     backgroundColor: '#fff',
     padding: 4
-  }
+  },
+  text: {
+    fontSize: 16,
+    color: '#7f8c8d',
+  },
+  balanceCard: {
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 20,
+  },
 })
 
 export default HomeScreen

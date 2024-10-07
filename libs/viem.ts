@@ -5,6 +5,7 @@ import {
   http,
   getContract,
   erc20Abi,
+  parseUnits,
 } from "viem"
 import { sepolia, baseSepolia } from "viem/chains"
 import { privateKeyToAccount } from "viem/accounts"
@@ -16,11 +17,11 @@ export const client = createPublicClient({
   transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
 })
 
-const walletClient = createWalletClient({
-  account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`),
-  chain: baseSepolia,
-  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
-})
+// const walletClient = createWalletClient({
+//   account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`),
+//   chain: baseSepolia,
+//   transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+// })
 
 export async function generateSignature() {
   const account = privateKeyToAccount(
@@ -37,22 +38,67 @@ export async function generateSignature() {
 }
 
 // get eth balance
-export const getUserBalance = (address: `0x${string}`) => {
+export const getUserBalance = async (address: `0x${string}`) => {
   return client.getBalance({ address })
 }
 
 // get usdc balance
 export const getUsdcBalance = async (address: `0x${string}`) => {
-  const contract = await getContract({
-    address: "0x5deac602762362fe5f135fa5904351916053cf70",
+  const balance = await client.readContract({
+    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
     abi: erc20Abi,
-    client: {
-      public: client,
-      wallet: walletClient,
-    },
-  })
-  return contract.read.balanceOf([address])
+    functionName: 'balanceOf',
+    args: [address],
+  });
+
+  // USDC usually has 6 decimal places, so we need to adjust it
+  const formattedBalance = Number(balance) / 1e6; 
+
+  // const formattedBalance = parseUnits(balance.toString(), 6); 
+  console.log(`Balance: ${formattedBalance}`);
+
+  return formattedBalance
 }
+
+// export const getUsdcBalance = async (address: `0x${string}`) => {
+//   const contract = await getContract({
+//     address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+//     abi: erc20Abi,
+//     client: {
+//       public: client,
+//       // wallet: walletClient,
+//     },
+//   })
+//   const balance = await contract.read.balanceOf([address])
+//   const formattedBalance = parseUnits(balance.toString(), 6); 
+
+//   console.log(formattedBalance , 'formattedBalance')
+//   return formattedBalance
+// }
+
 
 // export const transferUsdcContract
 // Create stealth Address store to ERC6538Registry contract
+
+export const transferUsdc = async (to: `0x${string}`, amountInUSDC: number, privateKey: `0x${string}`) => {
+  // Convert the amount to the smallest unit (since USDC has 6 decimals)
+  const amount = BigInt(amountInUSDC * 1e6); // 1 USDC = 10^6 micro USDC
+
+  const walletClient = createWalletClient({
+    account: privateKeyToAccount(privateKey),
+    chain: baseSepolia,
+    transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+  })
+
+  // Call the `transfer` function on the USDC contract
+  const txHash = await walletClient.writeContract({
+    address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e', // USDC contract address
+    abi: erc20Abi,
+    functionName: 'transfer',
+    args: [to, amount], // Arguments for `transfer(to, amount)`
+    account: privateKeyToAccount(`0x${process.env.EXPO_PUBLIC_PRIVATE_KEY}`), // Sender account
+  });
+
+  console.log('Transaction Hash:', txHash);
+  return txHash;
+}
