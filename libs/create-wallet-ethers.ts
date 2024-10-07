@@ -40,7 +40,7 @@ export const createUserWalletEthers = async () => {
   const seed = await pbkdf2Async(sha512, entropy, salt, { c: 2048, dkLen: 64 })
 
   // Generate BIP32 Root Key
-  const rootHDNode = ethers.utils.HDNode.fromSeed(seed)
+  const rootHDNode = ethers.HDNodeWallet.fromSeed(seed)
 
   // derivePath("m", seed)
   const { extendedKey: bip32RootKey } = rootHDNode
