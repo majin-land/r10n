@@ -1,8 +1,8 @@
 import 'react-native-get-random-values'
 
 import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
-import { formatStealthAddress, formatStealthMetaAddress } from '@/utils/helper'
-import React, { useEffect, useState, useCallback } from 'react'
+import { formatStealthMetaAddress } from '@/utils/helper'
+import React, { useEffect, useState } from 'react'
 import {
   View,
   Text,
@@ -14,30 +14,17 @@ import {
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
 import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets'
-import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
-import { generateStealthInfo, generateStealthPrivate } from '@/libs/stealth'
+import { generateStealthInfo } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
 import { getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
 import { formatEther } from 'viem'
 import { LinearGradient } from 'expo-linear-gradient'
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { generateStealthPrivateKey } from '@fluidkey/stealth-account-kit'
 import { Hex } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-type announcementType = {
-  __typename: 'Announcement' | string
-  block_number: string
-  ephemeralPubKey: Hex | string
-  id: string | Hex
-  metadata: string | Hex
-  schemeId: string
-  stealthAddress: Hex | string
-  timestamp_: string
-  transactionHash_: string | Hex
-}
+import { watchAnnouncements } from '@/contracts'
+import { useAnnouncements } from '@/context/AnnouncementContext'
 
 // Updated activities data
 const activitiesData = [
@@ -101,6 +88,7 @@ const HomeScreen: React.FC = () => {
     spendingPrivateKey,
     fetchStealthWalletBalance,
   } = useStealthMetaAddress()
+  const { announcements } = useAnnouncements()
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
@@ -109,21 +97,19 @@ const HomeScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
- 
+
   const [userBalanceUsdc, setUserBalanceUsdc] = useState<string>()
 
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta')
-  const [blockNumber, setBlockNumber] = useState('14282482')
-  const [stealthAddresses, setStealthAddresses] = useState([])
   const router = useRouter()
 
-  const { data, loading: isFetchStealthAddress, error } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
+  const {
+    data,
+    loading: isFetchStealthAddress,
+    error,
+  } = useQuery(GET_STEALTH_META_ADDRESS_SETS, {
     variables: {},
   })
-  const { data: queryAnnouncements, loading: isFetchAnnoucement, } = useQuery(GET_ANNOUNCEMENTS, {
-    variables: { blockNumber: blockNumber },
-  })
-
 
   const fetchMainBalance = async () => {
     const userBalance = await getUserBalance(walletAddress as `0x${string}`)
@@ -150,7 +136,7 @@ const HomeScreen: React.FC = () => {
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
-      
+
       setStealthAddress(stealthInfo.stealthAddress[0])
       // TODO: Store to storage and publish generated Address
     } catch (error) {
@@ -162,109 +148,25 @@ const HomeScreen: React.FC = () => {
     }
   }
 
-  const storeAnnouncements = async (announcements: { 
-    stealthAddress: string;
-    ephemeralPubKey: string;
-    block_number: string;
-  }[]) => {
-    const latestBlockNumber = announcements[0].block_number
-
-    // store to async storage
-    try {
-      console.log(latestBlockNumber, 'Latest Block Number') // log the latest block number
-      await AsyncStorage.setItem('latestBlockNumber', latestBlockNumber)
-
-      setBlockNumber(latestBlockNumber)
-    } catch (error) {
-      console.error('Error storing latestBlockNumber', error)
-    }
-
-    const storeAnnoucments = announcements.map(async (announcement) => {
-      const { stealthAddress, ephemeralPubKey } = announcement
-
-      // Generate stealth private key from ephemeral public key
-      const { stealthPrivateKey } = generateStealthPrivateKey({
-        spendingPrivateKey: spendingPrivateKey as Hex,
-        ephemeralPublicKey: ephemeralPubKey as Hex,
-      })
-
-      // get the stealth address
-      const stealthAccount = privateKeyToAccount(stealthPrivateKey)
-      const generatedStealthAddress = stealthAccount.address
-
-      // check generated stealth address === stealth address from contract
-      if (stealthAddress === generatedStealthAddress) {
-        try {
-          // check if current exist announcements storage
-          const storedAnnouncements = await AsyncStorage.getItem(
-            '@announcements',
-          )
-          const currentAnnouncements = storedAnnouncements
-            ? JSON.parse(storedAnnouncements)
-            : []
-
-          // Merge the new announcements with the current ones
-          const updatedAnnouncements = [
-            ...currentAnnouncements,
-            announcement,
-          ]
-          // store the announcement
-          await AsyncStorage.setItem(
-            '@announcements',
-            JSON.stringify(updatedAnnouncements),
-          )
-
-          console.log('Announcements updated successfully!')
-        } catch (e) {
-          console.error('Failed to update announcements:', e)
-        }
-      }
-    })
-
-    await Promise.all(storeAnnoucments)
-
-    console.log(announcements, 'DATA Announcements')
-  }
-
-  const retrieveAnnouncements = async () => {
-    try {
-      const storedAnnouncements = await AsyncStorage.getItem('@announcements')
-      const parsedStoredAnnouncements =
-        storedAnnouncements != null ? JSON.parse(storedAnnouncements) : []
-      if (storedAnnouncements) {
-        setStealthAddresses(JSON.parse(parsedStoredAnnouncements))
-      }
-    } catch (e) {
-      console.error('Failed to retrieve announcements:', e)
-    }
-  }
-
-  const getStoredLatestBlockNumber = async () => {
-    const storedLatestAnnouncementsBlockNumber = await AsyncStorage.getItem(
-      'latestBlockNumber',
-    )
-
-    if (storedLatestAnnouncementsBlockNumber) {
-      setBlockNumber(storedLatestAnnouncementsBlockNumber)
-    }
-  }
+  useEffect(() => {
+    generateInitialStealthAddress()
+  }, [])
 
   useEffect(() => {
-    if (queryAnnouncements) {
-      generateInitialStealthAddress()
-      storeAnnouncements(queryAnnouncements.announcements)
-      getStoredLatestBlockNumber()
-      retrieveAnnouncements()
-    }
-  }, [queryAnnouncements])
+    watchAnnouncements(spendingPrivateKey as Hex)
+  }, [spendingPrivateKey])
 
   useEffect(() => {
     fetchMainBalance()
   }, [walletAddress])
 
+  useEffect(() => {
+    console.log(announcements, 'Current Announcements in Storage!')
+  }, [announcements])
+
   // if (loading) return <Text>Loading...</Text>;
   // if (error) return <Text>Error: {error.message}</Text>;
-  if (isFetchAnnoucement && isFetchStealthAddress) return <Text>Loading ...</Text>
+  if (isFetchStealthAddress) return <Text>Loading ...</Text>
 
   const renderActivity = ({ item }: { item: (typeof activitiesData)[0] }) => (
     <View style={styles.activityContainer}>
@@ -294,105 +196,130 @@ const HomeScreen: React.FC = () => {
   )
 
   return (
-    <SafeAreaView  style={styles.container}>
-    <FlatList
-      data={activitiesData}
-      renderItem={renderActivity}
-      keyExtractor={(item) => item.id}
-      refreshing={isRefreshing}
-      onRefresh={async () => {
-        Promise.all([
-          generateInitialStealthAddress(),
-          storeAnnouncements(queryAnnouncements.announcements),
-          getStoredLatestBlockNumber(),
-          retrieveAnnouncements(),
-          fetchMainBalance(),
-        ]).then(() => setIsRefreshing(false))
-      }}
-      ListHeaderComponent={
-        <>
-          <Text style={styles.header}>R1ON</Text>
-          <Text style={styles.label}>Main Wallet</Text>
-          <LinearGradient colors={['#4ca1af', '#c4e0e5']} style={styles.balanceCard}>
-            <View style={styles.mainWalletbalance}>
-              <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
-              <Text style={styles.balanceText}>{mainBalanceUsdc || 0} USDC</Text>
-            </View>
-            <Text style={styles.text}>{walletAddress}</Text>
-          </LinearGradient>
-          <Text style={styles.label}>Receive</Text>
-          <View style={styles.tabWrapper}>
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[styles.tabButton, selectedTab === 'meta' && styles.activeTab]}
-                onPress={() => setSelectedTab('meta')}
-              >
-                <Text style={[styles.tabText, selectedTab === 'meta' && styles.activeTabText]}>
-                  Stealth Meta Address
+    <SafeAreaView style={styles.container}>
+      <FlatList
+        data={activitiesData}
+        renderItem={renderActivity}
+        keyExtractor={(item) => item.id}
+        refreshing={isRefreshing}
+        onRefresh={async () => {
+          Promise.all([
+            generateInitialStealthAddress(),
+            fetchMainBalance(),
+          ]).then(() => setIsRefreshing(false))
+        }}
+        ListHeaderComponent={
+          <>
+            <Text style={styles.header}>R1ON</Text>
+            <Text style={styles.label}>Main Wallet</Text>
+            <LinearGradient
+              colors={['#4ca1af', '#c4e0e5']}
+              style={styles.balanceCard}
+            >
+              <View style={styles.mainWalletbalance}>
+                <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
+                <Text style={styles.balanceText}>
+                  {mainBalanceUsdc || 0} USDC
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.tabButton, selectedTab === 'stealth' && styles.activeTab]}
-                onPress={() => setSelectedTab('stealth')}
-              >
-                <Text style={[styles.tabText, selectedTab === 'stealth' && styles.activeTabText]}>
-                  Stealth Address
-                </Text>
-              </TouchableOpacity>
-            </View>
-            {selectedTab === 'meta' ? (
-              <View style={styles.addressContainer}>
-                <Text style={styles.address}>
-                  {formatStealthMetaAddress(stealthMetaAddress || '')}
-                </Text>
+              </View>
+              <Text style={styles.text}>{walletAddress}</Text>
+            </LinearGradient>
+            <Text style={styles.label}>Receive</Text>
+            <View style={styles.tabWrapper}>
+              <View style={styles.tabContainer}>
                 <TouchableOpacity
-                  style={styles.copyButton}
-                  onPress={() => copyToClipboard(stealthMetaAddress || '')}
+                  style={[
+                    styles.tabButton,
+                    selectedTab === 'meta' && styles.activeTab,
+                  ]}
+                  onPress={() => setSelectedTab('meta')}
                 >
-                  <Text style={styles.copyButtonText}>Copy</Text>
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTab === 'meta' && styles.activeTabText,
+                    ]}
+                  >
+                    Stealth Meta Address
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.tabButton,
+                    selectedTab === 'stealth' && styles.activeTab,
+                  ]}
+                  onPress={() => setSelectedTab('stealth')}
+                >
+                  <Text
+                    style={[
+                      styles.tabText,
+                      selectedTab === 'stealth' && styles.activeTabText,
+                    ]}
+                  >
+                    Stealth Address
+                  </Text>
                 </TouchableOpacity>
               </View>
-            ) : (
-              <View style={styles.addressContainer}>
-                <Text style={styles.address}>{stealthAddress}</Text>
-                <TouchableOpacity
-                  style={styles.copyButton}
-                  onPress={() => copyToClipboard(stealthAddress || '')}
-                >
-                  <Text style={styles.copyButtonText}>Copy</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-          <LinearGradient colors={['#4ca1af', '#007AFF']} style={styles.balanceContainer}>
-            <Text style={styles.balanceText}>Balance</Text>
-            <Text style={styles.balanceAmount}>{userBalanceUsdc || 0} USDC</Text>
-          </LinearGradient>
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => clearWallet().then(() => router.replace('/'))}
-          >
-            <Text style={styles.clearButtonText}>Reset keys</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.successButton}
-            onPress={() =>
-              transferUsdc(
-                stealthAddress as `0x${string}`,
-                1,
-                privateKey as `0x${string}`,
-              )
-                .then(console.log)
-                .catch(console.log)
-            }
-          >
-            <Text style={styles.clearButtonText}>Transfer to stealh Address</Text>
-          </TouchableOpacity>
-          <Text style={styles.activitiesLabel}>Activities</Text>
-        </>
-      }
-      showsVerticalScrollIndicator={false}
-    />
+              {selectedTab === 'meta' ? (
+                <View style={styles.addressContainer}>
+                  <Text style={styles.address}>
+                    {formatStealthMetaAddress(stealthMetaAddress || '')}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => copyToClipboard(stealthMetaAddress || '')}
+                  >
+                    <Text style={styles.copyButtonText}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.addressContainer}>
+                  <Text style={styles.address}>{stealthAddress}</Text>
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => copyToClipboard(stealthAddress || '')}
+                  >
+                    <Text style={styles.copyButtonText}>Copy</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+            <LinearGradient
+              colors={['#4ca1af', '#007AFF']}
+              style={styles.balanceContainer}
+            >
+              <Text style={styles.balanceText}>Balance</Text>
+              <Text style={styles.balanceAmount}>
+                {userBalanceUsdc || 0} USDC
+              </Text>
+            </LinearGradient>
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => clearWallet().then(() => router.replace('/'))}
+            >
+              <Text style={styles.clearButtonText}>Reset keys</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.successButton}
+              onPress={() =>
+                transferUsdc(
+                  stealthAddress as `0x${string}`,
+                  1,
+                  privateKey as `0x${string}`,
+                )
+                  .then(console.log)
+                  .catch(console.log)
+              }
+            >
+              <Text style={styles.clearButtonText}>
+                Transfer to stealh Address
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.activitiesLabel}>Activities</Text>
+          </>
+        }
+        showsVerticalScrollIndicator={false}
+      />
     </SafeAreaView>
   )
 }

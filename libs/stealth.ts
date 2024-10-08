@@ -264,30 +264,12 @@ export async function generateStealthInfo(
 }
 
 export async function generateStealthPrivate({
-  userPrivateKey,
-  userPin,
-  userAddress,
   ephemeralPublicKey,
+  spendingPrivateKey,
 }: {
-  userPrivateKey: `0x${string}`;
-  userPin: string;
-  userAddress: string;
-  ephemeralPublicKey: `0x${string}`;
+  ephemeralPublicKey: Hex | `0x${string}`;
+  spendingPrivateKey: Hex | `0x${string}`;
 }) {
-  // Generate the signature from which the private keys will be derived
-  const account = privateKeyToAccount(userPrivateKey);
-  const { message } = generateFluidkeyMessage({
-    pin: userPin,
-    address: userAddress,
-  });
-  const signature = await account.signMessage({
-    message,
-  });
-
-  // Generate the private keys from the signature
-  const { spendingPrivateKey, viewingPrivateKey } =
-    generateKeysFromSignature(signature);
-
   // Generate stealth private key from ephemeral public key
   const { stealthPrivateKey } = generateStealthPrivateKey({
     spendingPrivateKey,

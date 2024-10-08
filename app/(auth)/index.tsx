@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react'
-import { useWallet } from '@/context/WalletContext'
-import { createUserWalletEthers } from '@/libs/create-wallet-ethers'
 import { View, Button, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import { useNavigation, useRouter } from 'expo-router'
-import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
-import { generateStealthMetaAddress } from '@/libs/stealth'
 import { Hex } from 'viem'
+
+import { useWallet } from '@/context/WalletContext'
+import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
+import { useAnnouncements } from '@/context/AnnouncementContext'
+import { createUserWalletEthers } from '@/libs/create-wallet-ethers'
+import { generateStealthMetaAddress } from '@/libs/stealth'
 
 const WalletScreen: React.FC = () => {
   const {
@@ -16,8 +18,17 @@ const WalletScreen: React.FC = () => {
     clearWallet,
     bib32RootKey,
   } = useWallet()
-  const { storeStealthMetaAddress, retrieveStealthMetaAddress } =
-    useStealthMetaAddress()
+  const {
+    storeStealthMetaAddress,
+    retrieveStealthMetaAddress,
+    spendingPrivateKey,
+  } = useStealthMetaAddress()
+  const {
+    retrieveLatestBlockNumber,
+    storeAnnouncements,
+    retrieveAnnouncements,
+    refetchAnnouncements,
+  } = useAnnouncements()
   const router = useRouter()
 
   const navigation = useNavigation()
@@ -27,49 +38,85 @@ const WalletScreen: React.FC = () => {
   }, [navigation])
 
   const handleCreateWallet = async () => {
-    // Check if a wallet already exists
-    const existingWallet = await retrieveWallet()
+    try {
+      console.log('Starting handleCreateWallet...')
+      const existingWallet = await retrieveWallet()
+      console.log('Existing wallet:', existingWallet)
 
-    // If a wallet exists, use its details
-    if (existingWallet) {
-      await retrieveStealthMetaAddress()
+      if (existingWallet) {
+        const storedMetaAddress = await retrieveStealthMetaAddress()
+        await retrieveAnnouncements()
+
+        const storedBlockNumber = await retrieveLatestBlockNumber()
+        console.log('Stored block number:', storedBlockNumber)
+
+        if (!storedBlockNumber) {
+          console.warn('Stored block number is null or undefined.')
+          return
+        }
+
+        const dataAnnouncements = await refetchAnnouncements(
+          storedBlockNumber as string,
+        )
+        console.log('Fetched announcements:', dataAnnouncements)
+
+        if (dataAnnouncements && storedMetaAddress) {
+          await storeAnnouncements(
+            dataAnnouncements,
+            storedMetaAddress.spendingPrivateKey as Hex,
+          )
+        }
+
+        console.log('Navigating to /home')
+        router.replace('/home')
+        return
+      }
+
+      console.log('Creating a new wallet...')
+      const createNewWallet = async () => {
+        const result = await createUserWalletEthers()
+        const { address, privateKey } = result.accounts[0]
+        const bip32RootKey = result.bip32RootKey
+
+        await storeWallet(address, privateKey, bip32RootKey)
+        return { address, privateKey }
+      }
+
+      const { address: newAddress, privateKey: newPrivateKey } =
+        await createNewWallet()
+      console.log('New wallet address:', newAddress)
+
+      const stealthData = await generateStealthMetaAddress({
+        userPrivateKey: newPrivateKey as Hex,
+        userPin: '1234',
+        userAddress: newAddress,
+      })
+
+      console.log('Generated stealth address data:', stealthData)
+
+      if (stealthData) {
+        const {
+          stealthMetaAddress,
+          spendingPrivateKey: generatedSpendingPrivKey,
+          viewingPrivateKey: generatedViewingPrivKey,
+          spendingPublicKey: generatedSpendingPubKey,
+          viewingPublicKey: generatedViewingPubKey,
+        } = stealthData
+
+        await storeStealthMetaAddress({
+          stealthMetaAddress,
+          spendingPrivateKey: generatedSpendingPrivKey,
+          viewingPrivateKey: generatedViewingPrivKey,
+          spendingPublicKey: generatedSpendingPubKey,
+          viewingPublicKey: generatedViewingPubKey,
+        })
+      }
+
+      console.log('Navigating to /home after wallet creation')
       router.replace('/home')
-      return
+    } catch (error) {
+      console.error('Error in handleCreateWallet:', error)
     }
-
-    // Otherwise, create a new wallet
-    const createNewWallet = async () => {
-      const result = await createUserWalletEthers()
-      const { address, privateKey } = result.accounts[0]
-      const bip32RootKey = result.bip32RootKey
-
-      await storeWallet(address, privateKey, bip32RootKey)
-      return { address, privateKey }
-    }
-
-    // Create the new wallet and proceed with its details
-    const { address: newAddress, privateKey: newPrivateKey } =
-      await createNewWallet()
-    const {
-      stealthMetaAddress,
-      spendingPrivateKey,
-      viewingPrivateKey,
-      spendingPublicKey,
-      viewingPublicKey,
-    } = await generateStealthMetaAddress({
-      userPrivateKey: newPrivateKey as Hex,
-      userPin: '1234',
-      userAddress: newAddress,
-    })
-    await storeStealthMetaAddress({
-      stealthMetaAddress,
-      spendingPrivateKey,
-      viewingPrivateKey,
-      spendingPublicKey,
-      viewingPublicKey,
-    })
-
-    router.replace('/home')
   }
 
   return (

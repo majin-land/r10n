@@ -22,8 +22,7 @@ export async function announce({
   const walletClient = createWalletClient({
     account: privateKeyToAccount(userPrivateKey),
     chain: baseSepolia,
-    transport: http(),
-    // transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+    transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
   })
 
   const hash = await walletClient.writeContract({
