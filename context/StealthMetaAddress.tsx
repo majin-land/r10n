@@ -6,6 +6,14 @@ import {
 import { getUsdcBalance } from "@/libs/viem";
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+interface StealthInfo {
+  stealthMetaAddress: `st:base:0x${string}`;
+  stealthAddress: `0x${string}`;
+  ephemeralPublicKey: `0x${string}`;
+  metadata: string;
+}
+const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+
 // Define the types
 type stealthMetaAddressCredentials = {
   stealthMetaAddress: string
@@ -150,27 +158,35 @@ export const StealthMetaAddressProvider: React.FC<{
     }
 
   const fetchStealthWalletBalance = async () => {
-    const stealthAddresses = [
-      {
-        address: '0x1cF5559B49Ce06F81c1e2C1633833b60e090C04C',
-        ephermalPubKey: '0x'
-      },
-      {
-        address: '0xe8af41abe02c04d40a258729637e5a7c2a6e9d2d',
-        ephermalPubKey: '0x'
-      },
-      {
-        address: '0xa19b49d2783c22d106ae5b551782b21e096c5be8',
-        ephermalPubKey: '0x'
-      },
-      {
-        address: '0xb526f85a1987990a828429b9f1624ef4f7f43863',
-        ephermalPubKey: '0x'
-      }
-    ]
+    // const stealthAddresses = [
+    //   {
+    //     address: '0x1cF5559B49Ce06F81c1e2C1633833b60e090C04C',
+    //     ephermalPubKey: '0x'
+    //   },
+    //   {
+    //     address: '0xe8af41abe02c04d40a258729637e5a7c2a6e9d2d',
+    //     ephermalPubKey: '0x'
+    //   },
+    //   {
+    //     address: '0xa19b49d2783c22d106ae5b551782b21e096c5be8',
+    //     ephermalPubKey: '0x'
+    //   },
+    //   {
+    //     address: '0xb526f85a1987990a828429b9f1624ef4f7f43863',
+    //     ephermalPubKey: '0x'
+    //   }
+    // ]
+    console.log('=========')
+    const getUserStealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS);
+    const stealthAdresses: StealthInfo[] = getUserStealthAddressCollection
+        ? JSON.parse(getUserStealthAddressCollection)
+        : [];
 
-    const balances = await Promise.all(stealthAddresses.map(annoucement => getUsdcBalance(annoucement.address as `0x${string}`)))
-    
+    console.log('=========', stealthAdresses)
+
+    const balances = await Promise.all(stealthAdresses.map(annoucement => getUsdcBalance(annoucement.stealthAddress as `0x${string}`)))
+    console.log('========xx=', balances)
+
     const countBalances = balances.reduce((crr, ac) => crr + ac , 0)
 
     return countBalances

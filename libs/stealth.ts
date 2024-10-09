@@ -233,7 +233,7 @@ export async function generateStealthInfo(
 
   // generate random ephemeral private key
   const ephemeralPrivateKey = toHex(randomPrivateKey());
-  console.log('safess', ephemeralPrivateKey)
+  console.log('safesss', viewPublicKey, viewPublicKey)
   // generate shared secret
   const sharedSecret = secp.getSharedSecret(
     ephemeralPrivateKey.replace("0x", ""),
@@ -242,6 +242,7 @@ export async function generateStealthInfo(
   console.log('safe', sharedSecret)
 
   const hashedSharedSecret = keccak256(Buffer.from(sharedSecret.slice(2)));
+  console.log('stealthAddressesstealthAddresses', hashedSharedSecret)
 
   const viewTag = hashedSharedSecret.slice(0, 4);
 
@@ -250,6 +251,7 @@ export async function generateStealthInfo(
     spendingPublicKeys: [spendPublicKey],
     ephemeralPrivateKey,
   });
+  console.log('stealthAddressesstealthAddresses', stealthAddresses)
 
   // generate ephemeral public key
   const ephemeralAccount = privateKeyToAccount(ephemeralPrivateKey);
@@ -257,7 +259,7 @@ export async function generateStealthInfo(
 
   return {
     stealthMetaAddress,
-    stealthAddress: stealthAddresses,
+    stealthAddress: stealthAddresses[0],
     ephemeralPublicKey,
     metadata: viewTag,
   };

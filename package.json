@@ -16,6 +16,9 @@
   },
   "dependencies": {
     "@apollo/client": "^3.11.8",
+    "@circle-fin/w3s-pw-react-native-sdk": "^1.1.0",
+    "@circle-fin/w3s-pw-web-sdk": "^1.1.6",
+    "@ethersproject/shims": "^5.7.0",
     "@expo/vector-icons": "^14.0.4",
     "@fluidkey/stealth-account-kit": "^1.0.1",
     "@noble/hashes": "^1.5.0",

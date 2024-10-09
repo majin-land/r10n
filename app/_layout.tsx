@@ -1,16 +1,15 @@
 global.Buffer = require('buffer').Buffer
 
-import {
-  DarkTheme,
-  DefaultTheme,
-  ThemeProvider,
-} from '@react-navigation/native'
-import { useFonts } from 'expo-font'
-import { Stack } from 'expo-router'
-import * as SplashScreen from 'expo-splash-screen'
-import { useEffect } from 'react'
-import 'react-native-reanimated'
-import 'react-native-get-random-values'
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { useFonts } from 'expo-font';
+import { Stack } from 'expo-router';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+import 'react-native-reanimated';
+
+// https://docs.ethers.org/v5/cookbook/react-native/
+import "@ethersproject/shims"
+import 'react-native-get-random-values';
 
 import { useColorScheme } from '@/hooks/useColorScheme'
 import React from 'react'
@@ -43,30 +42,16 @@ export default function RootLayout() {
     <ApolloProviderApps>
       <WalletProvider>
         <StealthMetaAddressProvider>
-          <AnnouncementsProvider>
-            <StatusBar
-              barStyle="light-content"
-              backgroundColor="#007AFF"
-              translucent={true}
-            />
-            <ThemeProvider
-              value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}
-            >
-              <Stack>
-                <Stack.Screen
-                  name="(auth)/index"
-                  options={{ headerShown: false }}
-                />{' '}
-                {/* Connect Wallet Screen */}
-                <Stack.Screen
-                  name="(tabs)"
-                  options={{ headerShown: false }}
-                />{' '}
-                {/* Tabs for Home, Transfer, Activity */}
-                <Stack.Screen name="+not-found" />
-              </Stack>
-            </ThemeProvider>
-          </AnnouncementsProvider>
+        <AnnouncementsProvider>
+          <StatusBar barStyle="light-content" backgroundColor="#007AFF" translucent={true} />
+          <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+            <Stack>
+              <Stack.Screen name="(auth)/index" options={{ headerShown: false }} /> {/* Connect Wallet Screen */}
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> {/* Tabs for Home, Transfer, Activity */}
+              <Stack.Screen name="+not-found" />
+            </Stack>
+          </ThemeProvider>
+        </AnnouncementsProvider>
         </StealthMetaAddressProvider>
       </WalletProvider>
     </ApolloProviderApps>

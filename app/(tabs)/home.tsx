@@ -25,6 +25,11 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { watchAnnouncements } from '@/contracts'
 import { useAnnouncements } from '@/context/AnnouncementContext'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import useERC20Transfers from '@/hooks/useERC20Transfers'
+
+const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+const USER_STEALTH_ADDRESS_ACTIVED = 'USER_STEALTH_ADDRESS_ACTIVED'
 
 // Updated activities data
 const activitiesData = [
@@ -79,6 +84,13 @@ const activitiesData = [
   },
 ]
 
+interface StealthInfo {
+  stealthMetaAddress: `st:base:0x${string}`;
+  stealthAddress: `0x${string}`;
+  ephemeralPublicKey: `0x${string}`;
+  metadata: string;
+}
+
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress, clearWallet } = useWallet()
   const {
@@ -94,6 +106,10 @@ const HomeScreen: React.FC = () => {
     null,
   )
 
+  const { transfers } = useERC20Transfers(stealthAddress)
+
+  // const { loading, transfers } = useERC20Transfers(stealthAddress)
+  console.log(transfers, 'transfers')
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
@@ -112,16 +128,23 @@ const HomeScreen: React.FC = () => {
   })
 
   const fetchMainBalance = async () => {
-    const userBalance = await getUserBalance(walletAddress as `0x${string}`)
-    const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
-    const stealthWalletbalance = await fetchStealthWalletBalance()
-
-    setUserBalanceUsdc(String(stealthWalletbalance))
-
-    setMainBalanceUsdc(String(usdcBalance))
-    setMainBalance(formatEther(userBalance))
+    try {
+      console.log('---------')
+      const userBalance = await getUserBalance(walletAddress as `0x${string}`)
+  
+      const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
+      console.log('---------usdcBalance', usdcBalance)
+      const stealthWalletbalance = await fetchStealthWalletBalance()
+      console.log(userBalance, 'ssssssssssss')
+      setUserBalanceUsdc(String(stealthWalletbalance))
+  
+      setMainBalanceUsdc(String(usdcBalance))
+      setMainBalance(formatEther(userBalance))
+    } catch (error) {
+      console.log('error:', error)
+    }
   }
-
+  
   const copyToClipboard = async (address: string) => {
     await Clipboard.setStringAsync(address)
     Alert.alert('Copied to Clipboard')
@@ -131,22 +154,51 @@ const HomeScreen: React.FC = () => {
     setExpandedId(expandedId === id ? null : id)
   }
 
+
   const generateInitialStealthAddress = async () => {
     try {
+
+      // Get the user stealth address collection from AsyncStorage
+      const getUserStealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS);
+      const getUserStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED);
+  
+      // Parse the retrieved string and check if it's a valid array of StealthInfo objects
+    
+      const activeStealthAdress: StealthInfo | null = getUserStealthAddress
+      ? JSON.parse(getUserStealthAddress)
+      : null;
+
+  
+      // Check if stealthAdresses is valid and has items
+      if (activeStealthAdress) {
+        setStealthAddress(activeStealthAdress.stealthAddress);
+        return;
+      }
+  
+      // If no stealth addresses, generate new stealthInfo
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
 
-      setStealthAddress(stealthInfo.stealthAddress[0])
+      const stealthAdresses: StealthInfo[] | null = getUserStealthAddressCollection
+      ? JSON.parse(getUserStealthAddressCollection)
+      : null;
+
+      // Store new stealthInfo to AsyncStorage
+      await AsyncStorage.setItem(USER_STEALTH_ADDRESS_COLLECTIONS, JSON.stringify([...(stealthAdresses || []), stealthInfo]));
+    
+      await AsyncStorage.setItem(USER_STEALTH_ADDRESS_ACTIVED, JSON.stringify(stealthInfo));
+      
+      // Set the first stealth address
+      setStealthAddress(stealthInfo.stealthAddress);
+  
       // TODO: Store to storage and publish generated Address
     } catch (error) {
-      const err =
-        error instanceof Error
-          ? JSON.parse(JSON.stringify(error))
-          : String(error)
-      console.error('error:', err)
+      // Handle the error properly
+      const err = error instanceof Error ? error.message : String(error);
+      console.error('Error generating stealth address:', err);
     }
-  }
+  };
 
   useEffect(() => {
     generateInitialStealthAddress()
@@ -157,10 +209,12 @@ const HomeScreen: React.FC = () => {
   }, [spendingPrivateKey])
 
   useEffect(() => {
+    console.log(walletAddress, 'walletAddresswalletAddress')
     fetchMainBalance()
   }, [walletAddress])
 
   useEffect(() => {
+
     console.log(announcements, 'Current Announcements in Storage!')
   }, [announcements])
 
