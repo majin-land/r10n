@@ -1,6 +1,9 @@
 import { ethers } from "ethers";
 import * as secp from "@noble/secp256k1";
 
+import { TOKEN } from '@/config/token'
+import { Activity } from "@/interface";
+
 // export function randomPrivateKey() {
 //   const randomWallet = ethers.Wallet.createRandom();
 //   return randomWallet.privateKey;
@@ -48,4 +51,23 @@ export const formatStealthAddress = (address: string): string => {
   const end = address.slice(-4);
 
   return `${start}....${end}`;
-};
+}
+
+export const formatDate = (date: string | Date) => {
+  return new Date(date).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
+
+export const getTokenSymbol = (tokenAddress: `0x${string}` | string): string | null => {
+  const tokenInfo = TOKEN.find((t) => t.token.toLowerCase() === tokenAddress.toLowerCase());
+  return tokenInfo ? tokenInfo.symbol : null;
+}
+
+export const sortActivitiesByDateDesc = (activities: Activity[]): Activity[] => {
+  return activities.sort((a, b) => {
+    return new Date(b.date).getTime() - new Date(a.date).getTime()
+  })
+}

@@ -43,7 +43,6 @@ export const getUserBalance = async (address: `0x${string}`) => {
 
 // get usdc balance
 export const getUsdcBalance = async (address: `0x${string}`) => {
-  console.log('----', address)
   const balance = await client.readContract({
     address: USDC_TOKEN_ADDRESS,
     abi: erc20Abi,
@@ -55,7 +54,6 @@ export const getUsdcBalance = async (address: `0x${string}`) => {
   const formattedBalance = Number(balance) / 1e6; 
 
   // const formattedBalance = parseUnits(balance.toString(), 6); 
-  console.log(`Balance: ${formattedBalance}`);
 
   return formattedBalance
 }

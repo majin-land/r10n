@@ -4,18 +4,14 @@ import { baseSepolia } from 'viem/chains'
 import '@ethersproject/shims' // Polyfill for React Native
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED} from '@/config/storage-key'
+
+import { StealthInfo, Activity } from '@/interface'
+
 const USDC_TOKEN_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 const DEFAULT_FROM_BLOCK = 16338834n
-const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
-const USER_STEALTH_ADDRESS_ACTIVED = 'USER_STEALTH_ADDRESS_ACTIVED'
-const ACTIVITY_STEALTH_ADDRESS = 'ACTIVITY_STEALTH_ADDRESS'
 
-interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`
-  stealthAddress: `0x${string}`
-  ephemeralPublicKey: `0x${string}`
-  metadata: string
-}
+
 
 const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
   const [transfers, setTransfers] = useState<any[]>([])
@@ -28,6 +24,11 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
       transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
     })
 
+    const getBlockTimestamp = async (blockNumber: bigint) => {
+      const block = await client.getBlock({ blockNumber });
+      return Number(block.timestamp) * 1000
+    }
+
     const processTransferLogs = async (logs: any[]) => {
       if (logs.length > 0) {
         const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED)
@@ -39,19 +40,24 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
           const transferLog = logs[0]
           const amountTransferred = transferLog.args.value
 
+          const blockTimestamp = await getBlockTimestamp(transferLog.blockNumber);
+          const date = new Date(blockTimestamp).toISOString();
+
           const newActivity = {
             txHash: transferLog.transactionHash,
             type: 'c',
             token: USDC_TOKEN_ADDRESS,
-            stealthAddress: activeStealthAddress?.stealthAddress,
-            amount: Number(amountTransferred) / 1e6, // Convert to USDC format
+            stealthAddress: targetAddress,
+            amount: Number(amountTransferred) / 1e6, // Convert to USDC format,
+            date,
           }
 
+
           const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
-          const _activities: StealthInfo[] | null = activities ? JSON.parse(activities) : null
+          const _activities: Activity[] = activities ? JSON.parse(activities) : []
 
           // Store the activity in AsyncStorage
-          await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([...(_activities || []), newActivity]))
+          await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities]))
 
           // Clean up the active stealth address if needed
           await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED)

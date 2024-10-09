@@ -1,7 +1,7 @@
 import 'react-native-get-random-values'
 
 import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
-import { formatStealthMetaAddress } from '@/utils/helper'
+import { formatDate, formatStealthMetaAddress, getTokenSymbol, sortActivitiesByDateDesc } from '@/utils/helper'
 import React, { useEffect, useState } from 'react'
 import {
   View,
@@ -29,62 +29,10 @@ import { useAnnouncements } from '@/context/AnnouncementContext'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useERC20Transfers from '@/hooks/useERC20Transfers'
 
-const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
-const USER_STEALTH_ADDRESS_ACTIVED = 'USER_STEALTH_ADDRESS_ACTIVED'
-const ACTIVITY_STEALTH_ADRESS  = 'ACTIVITY_STEALTH_ADRESS '
+import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED, USER_STEALTH_ADDRESS_COLLECTIONS } from '@/config/storage-key'
+import { Activity } from '@/interface'
 
 // Updated activities data
-const activitiesData = [
-  {
-    id: '1',
-    date: 'October 1, 2024',
-    amount: '400',
-    type: 'received',
-    token: 'USDC',
-  },
-  {
-    id: '2',
-    date: 'October 1, 2024',
-    amount: '200',
-    type: 'sent',
-    token: 'USDC',
-  },
-  {
-    id: '3',
-    date: 'October 1, 2024',
-    amount: '100',
-    type: 'received',
-    token: 'USDC',
-  },
-  {
-    id: '4',
-    date: 'October 1, 2024',
-    amount: '100',
-    type: 'received',
-    token: 'USDC',
-  },
-  {
-    id: '5',
-    date: 'October 1, 2024',
-    amount: '100',
-    type: 'received',
-    token: 'USDC',
-  },
-  {
-    id: '6',
-    date: 'October 1, 2024',
-    amount: '100',
-    type: 'received',
-    token: 'USDC',
-  },
-  {
-    id: '7',
-    date: 'October 1, 2024',
-    amount: '100',
-    type: 'received',
-    token: 'USDC',
-  },
-]
 
 interface StealthInfo {
   stealthMetaAddress: `st:base:0x${string}`;
@@ -115,7 +63,8 @@ const HomeScreen: React.FC = () => {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
-
+  const [activities, setActivities] = useState<Activity[]>([])
+  
   const [userBalanceUsdc, setUserBalanceUsdc] = useState<string>()
 
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta')
@@ -200,7 +149,16 @@ const HomeScreen: React.FC = () => {
     }
   };
 
+
+  const getActivities = async () => {
+    const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
+    const _activities: Activity[] = activities ? JSON.parse(activities) : []
+
+    setActivities(sortActivitiesByDateDesc(_activities))
+  }
+
   useEffect(() => {
+    getActivities()
     generateInitialStealthAddress()
     fetchMainBalance()
   }, [transfers])
@@ -210,7 +168,6 @@ const HomeScreen: React.FC = () => {
   }, [spendingPrivateKey])
 
   useEffect(() => {
-    console.log(walletAddress, 'walletAddresswalletAddress')
     fetchMainBalance()
   }, [walletAddress])
 
@@ -223,26 +180,26 @@ const HomeScreen: React.FC = () => {
   // if (error) return <Text>Error: {error.message}</Text>;
   if (isFetchStealthAddress) return <Text>Loading ...</Text>
 
-  const renderActivity = ({ item }: { item: (typeof activitiesData)[0] }) => (
+  const renderActivity = ({ item }: { item: Activity }) => (
     <View style={styles.activityContainer}>
       <TouchableOpacity
-        onPress={() => toggleExpand(item.id)}
+        onPress={() => toggleExpand(item.txHash)}
         style={styles.activityHeader}
       >
-        <Text style={styles.date}>{item.date}</Text>
+        <Text style={styles.date}>{formatDate(item.date || new Date()) }</Text>
         <Text
           style={[
             styles.amount,
-            item.type === 'sent' ? styles.sent : styles.received,
+            item.type === 'd' ? styles.sent : styles.received,
           ]}
         >
-          {item.amount} <Text style={styles.token}>{item.token}</Text>
+          {item.amount} <Text style={styles.token}>{getTokenSymbol(item.token)}</Text>
         </Text>
       </TouchableOpacity>
-      {expandedId === item.id && (
+      {expandedId === item.txHash && (
         <View style={styles.details}>
           <Text style={styles.detailsText}>
-            {item.type === 'sent' ? 'You sent' : 'You received'} {item.amount}{' '}
+            {item.type === 'd' ? 'You sent' : 'You received'} {item.amount}{' '}
             {item.token}
           </Text>
         </View>
@@ -250,12 +207,15 @@ const HomeScreen: React.FC = () => {
     </View>
   )
 
+  console.log(stealthAddress, 'stealthAddressstealthAddress')
+
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={activitiesData}
+        data={activities}
+        contentContainerStyle={styles.activityListContainer}
         renderItem={renderActivity}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.txHash}
         refreshing={isRefreshing}
         onRefresh={async () => {
           Promise.all([
@@ -368,7 +328,7 @@ const HomeScreen: React.FC = () => {
               }
             >
               <Text style={styles.clearButtonText}>
-                Transfer to stealh Address
+                Transfer from main to stealh Address
               </Text>
             </TouchableOpacity>
             <Text style={styles.activitiesLabel}>Activities</Text>
@@ -384,7 +344,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F3F3F3', // light background color
+    backgroundColor: '#F3F3F3',
   },
   header: {
     fontSize: 28,
@@ -566,6 +526,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#6c757d', 
     opacity: 0.7, 
   },
+  activityListContainer: {
+    paddingBottom: 60
+  }
 })
 
 export default HomeScreen
