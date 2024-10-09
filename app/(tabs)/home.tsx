@@ -1,7 +1,12 @@
 import 'react-native-get-random-values'
 
 import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
-import { formatDate, formatStealthMetaAddress, getTokenSymbol, sortActivitiesByDateDesc } from '@/utils/helper'
+import {
+  formatDate,
+  formatStealthMetaAddress,
+  getTokenSymbol,
+  sortActivitiesByDateDesc,
+} from '@/utils/helper'
 import React, { useEffect, useState } from 'react'
 import {
   View,
@@ -18,7 +23,12 @@ import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddre
 import { generateStealthInfo } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
-import { client, getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
+import {
+  client,
+  getUsdcBalance,
+  getUserBalance,
+  transferUsdc,
+} from '@/libs/viem'
 import { decodeEventLog, erc20Abi, formatEther, parseAbiItem } from 'viem'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Hex } from 'viem'
@@ -29,16 +39,20 @@ import { useAnnouncements } from '@/context/AnnouncementContext'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useERC20Transfers from '@/hooks/useERC20Transfers'
 
-import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED, USER_STEALTH_ADDRESS_COLLECTIONS } from '@/config/storage-key'
+import {
+  ACTIVITY_STEALTH_ADDRESS,
+  USER_STEALTH_ADDRESS_ACTIVED,
+  USER_STEALTH_ADDRESS_COLLECTIONS,
+} from '@/config/storage-key'
 import { Activity } from '@/interface'
 
 // Updated activities data
 
 interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`;
-  stealthAddress: `0x${string}`;
-  ephemeralPublicKey: `0x${string}`;
-  metadata: string;
+  stealthMetaAddress: `st:base:0x${string}`
+  stealthAddress: `0x${string}`
+  ephemeralPublicKey: `0x${string}`
+  metadata: string
 }
 
 const HomeScreen: React.FC = () => {
@@ -55,7 +69,7 @@ const HomeScreen: React.FC = () => {
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
-  
+
   const { transfers, loading } = useERC20Transfers(stealthAddress)
 
   // const { loading, transfers } = useERC20Transfers(stealthAddress)
@@ -64,7 +78,7 @@ const HomeScreen: React.FC = () => {
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
   const [activities, setActivities] = useState<Activity[]>([])
-  
+
   const [userBalanceUsdc, setUserBalanceUsdc] = useState<string>()
 
   const [selectedTab, setSelectedTab] = useState<'meta' | 'stealth'>('meta')
@@ -81,19 +95,19 @@ const HomeScreen: React.FC = () => {
   const fetchMainBalance = async () => {
     try {
       const userBalance = await getUserBalance(walletAddress as `0x${string}`)
-  
+
       const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
       const stealthWalletbalance = await fetchStealthWalletBalance()
 
       setUserBalanceUsdc(String(stealthWalletbalance))
-  
+
       setMainBalanceUsdc(String(usdcBalance))
       setMainBalance(formatEther(userBalance))
     } catch (error) {
       console.log('error:', error)
     }
   }
-  
+
   const copyToClipboard = async (address: string) => {
     await Clipboard.setStringAsync(address)
     Alert.alert('Copied to Clipboard')
@@ -103,52 +117,59 @@ const HomeScreen: React.FC = () => {
     setExpandedId(expandedId === id ? null : id)
   }
 
-
   const generateInitialStealthAddress = async () => {
     try {
-
       // Get the user stealth address collection from AsyncStorage
-      const getUserStealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS);
-      const getUserStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED);
-  
-      // Parse the retrieved string and check if it's a valid array of StealthInfo objects
-    
-      const activeStealthAdress: StealthInfo | null = getUserStealthAddress
-      ? JSON.parse(getUserStealthAddress)
-      : null;
+      const getUserStealthAddressCollection = await AsyncStorage.getItem(
+        USER_STEALTH_ADDRESS_COLLECTIONS,
+      )
+      const getUserStealthAddress = await AsyncStorage.getItem(
+        USER_STEALTH_ADDRESS_ACTIVED,
+      )
 
-  
+      // Parse the retrieved string and check if it's a valid array of StealthInfo objects
+
+      const activeStealthAdress: StealthInfo | null = getUserStealthAddress
+        ? JSON.parse(getUserStealthAddress)
+        : null
+
       // Check if stealthAdresses is valid and has items
       if (activeStealthAdress) {
-        setStealthAddress(activeStealthAdress.stealthAddress);
-        return;
+        setStealthAddress(activeStealthAdress.stealthAddress)
+        return
       }
-  
+
       // If no stealth addresses, generate new stealthInfo
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
 
-      const stealthAdresses: StealthInfo[] | null = getUserStealthAddressCollection
-      ? JSON.parse(getUserStealthAddressCollection)
-      : null;
+      const stealthAdresses: StealthInfo[] | null =
+        getUserStealthAddressCollection
+          ? JSON.parse(getUserStealthAddressCollection)
+          : null
 
       // Store new stealthInfo to AsyncStorage
-      await AsyncStorage.setItem(USER_STEALTH_ADDRESS_COLLECTIONS, JSON.stringify([...(stealthAdresses || []), stealthInfo]));
-    
-      await AsyncStorage.setItem(USER_STEALTH_ADDRESS_ACTIVED, JSON.stringify(stealthInfo));
-      
+      await AsyncStorage.setItem(
+        USER_STEALTH_ADDRESS_COLLECTIONS,
+        JSON.stringify([...(stealthAdresses || []), stealthInfo]),
+      )
+
+      await AsyncStorage.setItem(
+        USER_STEALTH_ADDRESS_ACTIVED,
+        JSON.stringify(stealthInfo),
+      )
+
       // Set the first stealth address
-      setStealthAddress(stealthInfo.stealthAddress);
-  
+      setStealthAddress(stealthInfo.stealthAddress)
+
       // TODO: Store to storage and publish generated Address
     } catch (error) {
       // Handle the error properly
-      const err = error instanceof Error ? error.message : String(error);
-      console.error('Error generating stealth address:', err);
+      const err = error instanceof Error ? error.message : String(error)
+      console.error('Error generating stealth address:', err)
     }
-  };
-
+  }
 
   const getActivities = async () => {
     const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
@@ -164,15 +185,17 @@ const HomeScreen: React.FC = () => {
   }, [transfers])
 
   useEffect(() => {
-    watchAnnouncements(spendingPrivateKey as Hex)
-  }, [spendingPrivateKey])
+    watchAnnouncements(
+      spendingPrivateKey as Hex,
+      stealthMetaAddress as `st:base:0x${string}`,
+    )
+  }, [spendingPrivateKey, stealthMetaAddress])
 
   useEffect(() => {
     fetchMainBalance()
   }, [walletAddress])
 
   useEffect(() => {
-
     console.log(announcements, 'Current Announcements in Storage!')
   }, [announcements])
 
@@ -186,14 +209,15 @@ const HomeScreen: React.FC = () => {
         onPress={() => toggleExpand(item.txHash)}
         style={styles.activityHeader}
       >
-        <Text style={styles.date}>{formatDate(item.date || new Date()) }</Text>
+        <Text style={styles.date}>{formatDate(item.date || new Date())}</Text>
         <Text
           style={[
             styles.amount,
             item.type === 'd' ? styles.sent : styles.received,
           ]}
         >
-          {item.amount} <Text style={styles.token}>{getTokenSymbol(item.token)}</Text>
+          {item.amount}{' '}
+          <Text style={styles.token}>{getTokenSymbol(item.token)}</Text>
         </Text>
       </TouchableOpacity>
       {expandedId === item.txHash && (
@@ -523,12 +547,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   disabledButton: {
-    backgroundColor: '#6c757d', 
-    opacity: 0.7, 
+    backgroundColor: '#6c757d',
+    opacity: 0.7,
   },
   activityListContainer: {
-    paddingBottom: 60
-  }
+    paddingBottom: 60,
+  },
 })
 
 export default HomeScreen
