@@ -123,7 +123,6 @@ const HomeScreen: React.FC = () => {
         setStealthAddress(activeStealthAdress.stealthAddress);
         return;
       }
-  
       // If no stealth addresses, generate new stealthInfo
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
@@ -153,10 +152,10 @@ const HomeScreen: React.FC = () => {
   const getActivities = async () => {
     const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
     const _activities: Activity[] = activities ? JSON.parse(activities) : []
-
+    console.log(JSON.stringify(_activities.map(a => ({txhash: a.txHash, amount: a.amount, address: a.stealthAddress})), null, 4))
     setActivities(sortActivitiesByDateDesc(_activities))
   }
-
+  
   useEffect(() => {
     getActivities()
     generateInitialStealthAddress()
@@ -215,12 +214,13 @@ const HomeScreen: React.FC = () => {
         data={activities}
         contentContainerStyle={styles.activityListContainer}
         renderItem={renderActivity}
-        keyExtractor={(item) => item.txHash}
+        keyExtractor={(item, index) => item.txHash + item.date}
         refreshing={isRefreshing}
         onRefresh={async () => {
           Promise.all([
             generateInitialStealthAddress(),
             fetchMainBalance(),
+            getActivities(),
           ]).then(() => setIsRefreshing(false))
         }}
         ListHeaderComponent={

@@ -52,15 +52,16 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
             date,
           }
 
-
           const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
           const _activities: Activity[] = activities ? JSON.parse(activities) : []
 
           // Store the activity in AsyncStorage
-          await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities]))
+          await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities.filter(act => act.stealthAddress)]))
 
           // Clean up the active stealth address if needed
           await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED)
+          console.log('New Activity')
+          console.log(JSON.stringify(newActivity, null, 4))
         }
       } else {
         console.log('No matching Transfer events found.')
