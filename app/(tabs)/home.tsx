@@ -252,63 +252,6 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Button title="test get log" 
-        onPress={async () => {
-          try {
-            // Fetch Transfer event logs from the specified contract
-            const logs = await client.getContractEvents({
-              address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-              abi: erc20Abi,  // Ensure this is the correct ERC-20 ABI
-              eventName: 'Transfer',
-              args: {
-                to: stealthAddress,  // Filter logs where the destination is the stealth address
-              },
-              fromBlock: 16338834n,  // The block to start searching from
-              strict: true,
-            });
-        
-            if (logs.length > 0) {
-              const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED);
-              const activeStealthAdress: StealthInfo | null = activatedStealthAddress
-                ? JSON.parse(activatedStealthAddress)
-                : null
-        
-              if (activeStealthAdress) {
-
-                const transferLog = logs[0]
-                const amountTransferred = transferLog.args.value
-        
-                const newActivity = {
-                  txHash: transferLog.transactionHash,
-                  type: 'c',
-                  token: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-                  stealthAddress: activeStealthAdress?.stealthAddress,
-                  amount: Number(amountTransferred) / 1e6,
-                };
-
-                const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADRESS);
-                const _activities: StealthInfo[] | null = activities
-                ? JSON.parse(activities)
-                : null;
-          
-                // Store the activity in AsyncStorage
-                await AsyncStorage.setItem(ACTIVITY_STEALTH_ADRESS, JSON.stringify([...(_activities || []), newActivity]));
-        
-                // Clean up the active stealth address if needed
-                await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED);
-              }
-        
-              // Optionally generate a new stealth address after the transfer is handled
-              generateInitialStealthAddress();
-            } else {
-              console.log('No matching Transfer events found.');
-            }
-          } catch (err) {
-            console.error('Error fetching or processing logs:', err);
-          }
-        }
-        }
-      />
       <FlatList
         data={activitiesData}
         renderItem={renderActivity}
