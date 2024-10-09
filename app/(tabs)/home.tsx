@@ -10,6 +10,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  Button,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
@@ -17,8 +18,8 @@ import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddre
 import { generateStealthInfo } from '@/libs/stealth'
 import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
-import { getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
-import { formatEther } from 'viem'
+import { client, getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
+import { decodeEventLog, erc20Abi, formatEther, parseAbiItem } from 'viem'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Hex } from 'viem'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -30,6 +31,7 @@ import useERC20Transfers from '@/hooks/useERC20Transfers'
 
 const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
 const USER_STEALTH_ADDRESS_ACTIVED = 'USER_STEALTH_ADDRESS_ACTIVED'
+const ACTIVITY_STEALTH_ADRESS  = 'ACTIVITY_STEALTH_ADRESS '
 
 // Updated activities data
 const activitiesData = [
@@ -105,11 +107,11 @@ const HomeScreen: React.FC = () => {
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
-
-  const { transfers } = useERC20Transfers(stealthAddress)
+  
+  const { transfers, loading } = useERC20Transfers(stealthAddress)
 
   // const { loading, transfers } = useERC20Transfers(stealthAddress)
-  console.log(transfers, 'transfers')
+  // console.log(transfers, 'transfers', stealthAddress)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
@@ -129,13 +131,11 @@ const HomeScreen: React.FC = () => {
 
   const fetchMainBalance = async () => {
     try {
-      console.log('---------')
       const userBalance = await getUserBalance(walletAddress as `0x${string}`)
   
       const usdcBalance = await getUsdcBalance(walletAddress as `0x${string}`)
-      console.log('---------usdcBalance', usdcBalance)
       const stealthWalletbalance = await fetchStealthWalletBalance()
-      console.log(userBalance, 'ssssssssssss')
+
       setUserBalanceUsdc(String(stealthWalletbalance))
   
       setMainBalanceUsdc(String(usdcBalance))
@@ -202,7 +202,8 @@ const HomeScreen: React.FC = () => {
 
   useEffect(() => {
     generateInitialStealthAddress()
-  }, [])
+    fetchMainBalance()
+  }, [transfers])
 
   useEffect(() => {
     watchAnnouncements(spendingPrivateKey as Hex)
@@ -251,6 +252,63 @@ const HomeScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container}>
+      <Button title="test get log" 
+        onPress={async () => {
+          try {
+            // Fetch Transfer event logs from the specified contract
+            const logs = await client.getContractEvents({
+              address: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+              abi: erc20Abi,  // Ensure this is the correct ERC-20 ABI
+              eventName: 'Transfer',
+              args: {
+                to: stealthAddress,  // Filter logs where the destination is the stealth address
+              },
+              fromBlock: 16338834n,  // The block to start searching from
+              strict: true,
+            });
+        
+            if (logs.length > 0) {
+              const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED);
+              const activeStealthAdress: StealthInfo | null = activatedStealthAddress
+                ? JSON.parse(activatedStealthAddress)
+                : null
+        
+              if (activeStealthAdress) {
+
+                const transferLog = logs[0]
+                const amountTransferred = transferLog.args.value
+        
+                const newActivity = {
+                  txHash: transferLog.transactionHash,
+                  type: 'c',
+                  token: '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+                  stealthAddress: activeStealthAdress?.stealthAddress,
+                  amount: Number(amountTransferred) / 1e6,
+                };
+
+                const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADRESS);
+                const _activities: StealthInfo[] | null = activities
+                ? JSON.parse(activities)
+                : null;
+          
+                // Store the activity in AsyncStorage
+                await AsyncStorage.setItem(ACTIVITY_STEALTH_ADRESS, JSON.stringify([...(_activities || []), newActivity]));
+        
+                // Clean up the active stealth address if needed
+                await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED);
+              }
+        
+              // Optionally generate a new stealth address after the transfer is handled
+              generateInitialStealthAddress();
+            } else {
+              console.log('No matching Transfer events found.');
+            }
+          } catch (err) {
+            console.error('Error fetching or processing logs:', err);
+          }
+        }
+        }
+      />
       <FlatList
         data={activitiesData}
         renderItem={renderActivity}
@@ -354,7 +412,8 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.clearButtonText}>Reset keys</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.successButton}
+              style={[styles.successButton, loading && styles.disabledButton]}
+              disabled={loading}
               onPress={() =>
                 transferUsdc(
                   stealthAddress as `0x${string}`,
@@ -559,6 +618,10 @@ const styles = StyleSheet.create({
   mainWalletbalance: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  disabledButton: {
+    backgroundColor: '#6c757d', 
+    opacity: 0.7, 
   },
 })
 
