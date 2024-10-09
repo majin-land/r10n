@@ -8,6 +8,8 @@ import { useQuery } from '@apollo/client'
 import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
 import { generateStealthPrivate } from '@/libs/stealth'
 
+const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+
 // Define the types
 type announcementsCredentials = {
   stealthAddress: Hex | string
@@ -23,12 +25,20 @@ interface AnnouncementsContextType {
   storeAnnouncements: (
     announcements: announcementsCredentials[],
     spendingPrivateKey: Hex | string,
+    stealthMetaAddress: `st:base:0x${string}`,
   ) => Promise<void>
   retrieveAnnouncements: () => Promise<announcementsCredentials[] | null>
   retrieveLatestBlockNumber: () => Promise<string | null>
   refetchAnnouncements: (
     block_number: string,
   ) => Promise<announcementsCredentials[]>
+}
+
+interface StealthInfo {
+  stealthMetaAddress: `st:base:0x${string}`
+  stealthAddress: `0x${string}`
+  ephemeralPublicKey: `0x${string}`
+  metadata: string
 }
 
 const AnnouncementsContext = createContext<
@@ -71,6 +81,7 @@ export const AnnouncementsProvider: React.FC<{
   const storeAnnouncements = async (
     announcements: announcementsCredentials[],
     spendingPrivateKey: Hex | string,
+    stealthMetaAddress: `st:base:0x${string}`,
   ): Promise<void> => {
     if (!spendingPrivateKey) {
       console.error('Spending private key is missing or invalid.')
@@ -92,9 +103,14 @@ export const AnnouncementsProvider: React.FC<{
       console.error('Error storing latestBlockNumber', error)
     }
 
+    // Get the user stealth address collection from AsyncStorage
+    const getUserStealthAddressCollection = await AsyncStorage.getItem(
+      USER_STEALTH_ADDRESS_COLLECTIONS,
+    )
+
     const storeAnnouncements = announcements.map(
       async (announcement: announcementsCredentials) => {
-        const { stealthAddress, ephemeralPubKey } = announcement
+        const { stealthAddress, ephemeralPubKey, metadata } = announcement
 
         if (!stealthAddress || !ephemeralPubKey) {
           console.warn('Invalid announcement data:', announcement)
@@ -130,6 +146,34 @@ export const AnnouncementsProvider: React.FC<{
                 '@announcements',
                 JSON.stringify(updatedAnnouncements),
               )
+
+              const stealthAdresses: StealthInfo[] | null =
+                getUserStealthAddressCollection
+                  ? JSON.parse(getUserStealthAddressCollection)
+                  : null
+
+              const stealthAnnouncementInfo: StealthInfo = {
+                stealthMetaAddress,
+                stealthAddress: stealthAddress as Hex,
+                ephemeralPublicKey: ephemeralPubKey as Hex,
+                metadata,
+              }
+
+              // check this announcement's stealth address is not exist on stealth address collection
+              if (
+                !stealthAdresses?.some(
+                  (sma) => sma.stealthAddress === stealthAddress,
+                )
+              ) {
+                // Store new stealthInfo to AsyncStorage
+                await AsyncStorage.setItem(
+                  USER_STEALTH_ADDRESS_COLLECTIONS,
+                  JSON.stringify([
+                    ...(stealthAdresses || []),
+                    stealthAnnouncementInfo,
+                  ]),
+                )
+              }
 
               console.log('Announcements updated successfully!')
             } catch (e) {

@@ -1,13 +1,22 @@
-import { createWalletClient, createPublicClient, custom, http, Hex } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { baseSepolia } from "viem/chains";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { createWalletClient, createPublicClient, custom, http, Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { baseSepolia } from 'viem/chains'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { client } from "@/libs/viem";
-import { announceContractAdddress } from "@/config/smart-contract-address";
+import { client } from '@/libs/viem'
+import { announceContractAdddress } from '@/config/smart-contract-address'
 
-import ERC5564AnnouncerABI from "./abi/ERC5564AnnouncerABI";
-import { generateStealthPrivate } from "@/libs/stealth";
+import ERC5564AnnouncerABI from './abi/ERC5564AnnouncerABI'
+import { generateStealthPrivate } from '@/libs/stealth'
+
+const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+
+interface StealthInfo {
+  stealthMetaAddress: `st:base:0x${string}`
+  stealthAddress: `0x${string}`
+  ephemeralPublicKey: `0x${string}`
+  metadata: string
+}
 
 export async function announce({
   userPrivateKey,
@@ -16,30 +25,33 @@ export async function announce({
   ephemeralPubKey,
   metadata,
 }: {
-  userPrivateKey: `0x${string}`;
-  schemeId: number;
-  stealthAddress: string;
-  ephemeralPubKey: string;
-  metadata: string;
+  userPrivateKey: `0x${string}`
+  schemeId: number
+  stealthAddress: string
+  ephemeralPubKey: string
+  metadata: string
 }) {
   const walletClient = createWalletClient({
     account: privateKeyToAccount(userPrivateKey),
     chain: baseSepolia,
     transport: http(),
-  });
+  })
 
   const hash = await walletClient.writeContract({
     address: announceContractAdddress,
     abi: ERC5564AnnouncerABI,
-    functionName: "announce",
+    functionName: 'announce',
     args: [schemeId, stealthAddress, ephemeralPubKey, metadata],
-  });
-  console.log("Successfully published announce, Transaction hash:", hash);
+  })
+  console.log('Successfully published announce, Transaction hash:', hash)
 
-  return hash;
+  return hash
 }
 
-export async function watchAnnouncements(spendingPrivateKey: Hex | string) {
+export async function watchAnnouncements(
+  spendingPrivateKey: Hex | string,
+  stealthMetaAddress: `st:base:0x${string}`,
+) {
   if (!spendingPrivateKey) return
 
   const watch = client.watchContractEvent({
@@ -47,21 +59,35 @@ export async function watchAnnouncements(spendingPrivateKey: Hex | string) {
     abi: ERC5564AnnouncerABI,
     eventName: 'Announcement',
     pollingInterval: 1_000,
-    onError: error => console.log(error),
+    onError: (error) => console.log(error),
     onLogs: async (logs) => {
       const newAnnouncement = logs[0]
 
+      // Get the user stealth address collection from AsyncStorage
+      const getUserStealthAddressCollection = await AsyncStorage.getItem(
+        USER_STEALTH_ADDRESS_COLLECTIONS,
+      )
+
       if (newAnnouncement) {
-        const newBlockNumber = newAnnouncement.blockNumber?.toString().slice(0, -1)
-        console.log(newAnnouncement.blockNumber?.toString().slice(0, -1), 'NEW BLOCK NUMBER')
+        const newBlockNumber = newAnnouncement.blockNumber
+          ?.toString()
+          .slice(0, -1)
+        console.log(
+          newAnnouncement.blockNumber?.toString().slice(0, -1),
+          'NEW BLOCK NUMBER',
+        )
         // Store to async storage
         try {
-          await AsyncStorage.setItem('latestBlockNumber', newBlockNumber as string)
+          await AsyncStorage.setItem(
+            'latestBlockNumber',
+            newBlockNumber as string,
+          )
         } catch (error) {
           console.error('Error storing latestBlockNumber', error)
         }
 
-        const { stealthAddress, ephemeralPubKey, schemeId, metadata } = newAnnouncement.args
+        const { stealthAddress, ephemeralPubKey, schemeId, metadata } =
+          newAnnouncement.args
         const newAnnouncementMetadata = {
           stealthAddress,
           ephemeralPubKey,
@@ -107,6 +133,34 @@ export async function watchAnnouncements(spendingPrivateKey: Hex | string) {
                 JSON.stringify(updatedAnnouncements),
               )
 
+              const stealthAdresses: StealthInfo[] | null =
+                getUserStealthAddressCollection
+                  ? JSON.parse(getUserStealthAddressCollection)
+                  : null
+
+              const stealthAnnouncementInfo: StealthInfo = {
+                stealthMetaAddress,
+                stealthAddress: stealthAddress as Hex,
+                ephemeralPublicKey: ephemeralPubKey as Hex,
+                metadata,
+              }
+
+              // check this announcement's stealth address is not exist on stealth address collection
+              if (
+                !stealthAdresses?.some(
+                  (sma) => sma.stealthAddress === stealthAddress,
+                )
+              ) {
+                // Store new stealthInfo to AsyncStorage
+                await AsyncStorage.setItem(
+                  USER_STEALTH_ADDRESS_COLLECTIONS,
+                  JSON.stringify([
+                    ...(stealthAdresses || []),
+                    stealthAnnouncementInfo,
+                  ]),
+                )
+              }
+
               console.log('Announcements updated successfully!')
             } catch (e) {
               console.error('Failed to update announcements:', e)
@@ -120,7 +174,7 @@ export async function watchAnnouncements(spendingPrivateKey: Hex | string) {
           console.error('Error generating stealth private key:', e)
         }
       }
-    }
+    },
   })
 
   return watch

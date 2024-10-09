@@ -64,6 +64,7 @@ const WalletScreen: React.FC = () => {
           await storeAnnouncements(
             dataAnnouncements,
             storedMetaAddress.spendingPrivateKey as Hex,
+            storedMetaAddress.stealthMetaAddress as `st:base:0x${string}`,
           )
         }
 
