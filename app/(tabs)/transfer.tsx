@@ -1,17 +1,53 @@
-import React, { useState } from 'react';
+import { useStealthMetaAddress } from '@/context/StealthMetaAddress';
+import { transferUsdc } from '@/libs/viem';
+import React, { useCallback, useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 
 const TransferScreen: React.FC = () => {
   const [amount, setAmount] = useState('');
   const [toAddress, setToAddress] = useState('');
+  const {
+    stealthMetaAddress,
+    spendingPublicKey,
+    viewingPublicKey,
+    spendingPrivateKey,
+    fetchStealthWalletBalance,
+  } = useStealthMetaAddress()
+  const [userBalanceUsdc, setUserBalanceUsdc] = useState<string>()
+
+  useEffect(() => {
+    const fetchWalletBalance = async () => {
+      const stealthWalletbalance = await fetchStealthWalletBalance()
+      setUserBalanceUsdc(String(stealthWalletbalance))
+
+    }
+    fetchWalletBalance()
+  }, [])
+
+  const send = useCallback(() => {
+    if (toAddress.startsWith("st:base:0x")) {
+      // check the stealth address in STEALTH_ADDRESS_COLLECTION
+      // check the funds if total same with the amount
+      // create the new stealth address for sender
+      // send all funds to new stealth address
+      // Generate stealth address by receiver stealth meta address
+      // the new stealth address will send to receiver stealth address
+    } else {
+      // check the stealth address in STEALTH_ADDRESS_COLLECTION
+      // check the funds if total same with the amount
+      // create the new stealth address for sender
+      // send all funds to new stealth address
+      // the new stealth address will send to receiver stealth address
+    }
+  }, [toAddress, amount])
 
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Transfer</Text>
 
       <View style={styles.balanceContainer}>
-        <Text style={styles.balanceAmount}>400 USDC</Text>
-        <Text style={styles.balanceValue}>$ 400.00</Text>
+        <Text style={styles.balanceAmount}>{userBalanceUsdc} USDC</Text>
+        <Text style={styles.balanceValue}>$ {userBalanceUsdc}.00</Text>
       </View>
 
       <Text style={styles.label}>Amount</Text>
@@ -30,7 +66,7 @@ const TransferScreen: React.FC = () => {
         onChangeText={setToAddress}
       />
 
-      <TouchableOpacity style={styles.sendButton} onPress={() => {/* handle send action */}}>
+      <TouchableOpacity style={styles.sendButton} onPress={send}>
         <Text style={styles.sendButtonText}>Send</Text>
       </TouchableOpacity>
     </View>
