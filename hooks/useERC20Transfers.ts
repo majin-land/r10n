@@ -20,14 +20,17 @@ const useERC20Transfers = (targetAddress: `0x${string}`) => {
 
     const fetchPastTransfers = async () => {
       try {
-        console.log('===================sss', targetAddress)
         setLoading(true);
-        const logs = await client.getLogs({
+
+       const logs = await client.getContractEvents({
           address: USDC_TOKEN_ADDRESS,
-          event: parseAbiItem('event Transfer(address indexed from, address indexed to, uint256 value)'),
-          args: { 
+          abi: erc20Abi,
+          eventName: 'Transfer',
+          args: {
             to: targetAddress
-          }
+          },
+          fromBlock: 16338834n,
+          strict: true,
         });
 
         // ACTIVE_STEALTH_ADDRESS = RESET {}
@@ -36,13 +39,13 @@ const useERC20Transfers = (targetAddress: `0x${string}`) => {
         // ACTIVITY_STEALTH_ADRESS = SET TX_HASH C(+) AMOUNT
         // ACTIVITY_STEALTH_ADRESS = SET TX_HASH D(-) AMOUNT
 
-        console.log(logs, 'logsloxxxxxgs')
         const pastTransfers = logs.map((log) => ({
           from: log.args.from,
           to: log.args.to,
           value: log.args.value.toString(),
           blockNumber: log.blockNumber,
         }));
+    
         setTransfers((prevTransfers) => [...prevTransfers, ...pastTransfers]);
         setLoading(false);
       } catch (err) {
