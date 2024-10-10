@@ -43,7 +43,7 @@ export default function TabLayout() {
           options={{
             title: 'Transfer',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'swap-horizontal' : 'swap-horizontal-outline'} color={color} />
+              <TabBarIcon name={focused ? 'swap-horizontal-outline' : 'swap-horizontal-sharp'} color={color} />
             ),
           }}
         />
@@ -52,16 +52,16 @@ export default function TabLayout() {
           options={{
             title: 'Activity',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'list' : 'list-outline'} color={color} />
+              <TabBarIcon name={focused ? 'timer-outline' : 'timer-sharp'} color={color} />
             ),
           }}
         />
          <Tabs.Screen
-          name="test"
+          name="saving"
           options={{
-            title: 'Test',
+            title: 'Saving',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'list' : 'list-outline'} color={color} />
+              <TabBarIcon name={focused ? 'bar-chart-sharp' : 'bar-chart-outline'} color={color} />
             ),
           }}
         />
