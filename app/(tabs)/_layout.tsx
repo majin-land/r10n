@@ -10,7 +10,7 @@ import { Colors } from '@/constants/Colors'
 import { useColorScheme } from '@/hooks/useColorScheme'
 
 export type RootDrawerParamList = {
-  Home: undefined
+  R10n: undefined
 }
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>()
@@ -28,7 +28,7 @@ export default function TabLayout() {
             width: '100%'          },
         }}
       >
-        <Drawer.Screen name="Home" component={TabsNavigator} />
+        <Drawer.Screen name="R10n" component={TabsNavigator} />
       </Drawer.Navigator>
     </NavigationContainer>
   )
@@ -53,7 +53,6 @@ function TabsNavigator() {
             backgroundColor: Colors[colorScheme ?? 'light'].background,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            height: 70,
           },
           headerShown: false,
         }}

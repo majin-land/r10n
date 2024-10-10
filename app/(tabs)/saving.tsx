@@ -17,7 +17,7 @@ const PortfolioScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.logo}>R1ON</Text>
+        {/* <Text style={styles.logo}>R1ON</Text> */}
         {/* <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuText}>☰</Text>
         </TouchableOpacity> */}

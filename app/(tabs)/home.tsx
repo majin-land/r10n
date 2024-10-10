@@ -233,7 +233,7 @@ const HomeScreen: React.FC = () => {
   console.log(stealthAddress, 'stealthAddressstealthAddress')
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <FlatList
         data={activities}
         contentContainerStyle={styles.activityListContainer}
@@ -360,14 +360,14 @@ const HomeScreen: React.FC = () => {
         }
         showsVerticalScrollIndicator={false}
       />
-    </SafeAreaView>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: 20,
     backgroundColor: '#F3F3F3',
   },
   header: {
