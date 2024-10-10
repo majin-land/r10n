@@ -7,8 +7,15 @@ import {
   generateStealthPrivateKey,
   predictStealthSafeAddressWithBytecode,
   predictStealthSafeAddressWithClient,
-  generateFluidkeyMessage,
+  generateFluidkeyMessage
 } from "@fluidkey/stealth-account-kit";
+
+import * as secp from "@noble/secp256k1";
+import { Hex, keccak256, toHex } from "viem";
+
+import { randomPrivateKey, compressPublicKey } from "@/utils/helper";
+
+import { registerKeys, registerKeysOnBehalf } from "./smart-contract";
 
 /**
  * End-to-end example of how to generate stealth Safe accounts based on the user's private key and the key generation message to be signed.
@@ -22,6 +29,11 @@ import {
  * @param chainId
  * @returns two lists of objects containing the nonce, the corresponding stealth Safe address, and the private key controlling the stealth Safe at that address
  */
+
+// function randomPrivateKey() {
+//   const randPrivateKey = secp.utils.randomPrivateKey();
+//   return `0x${Buffer.from(randPrivateKey).toString("hex")}`;
+// }
 
 export async function generateStealthSafeAccount({
   userPrivateKey,
@@ -132,4 +144,146 @@ export async function generateStealthSafeAccount({
 
   // Return the results
   return results;
+}
+
+export async function generateStealthMetaAddress({
+  userPrivateKey,
+  userPin,
+  userAddress,
+}: {
+  userPrivateKey: `0x${string}`;
+  userPin: string;
+  userAddress: string;
+}) {
+  // Generate the signature from which the private keys will be derived
+  const account = privateKeyToAccount(userPrivateKey);
+  const { message } = generateFluidkeyMessage({
+    pin: userPin,
+    address: userAddress,
+  });
+  const signature = await account.signMessage({
+    message,
+  });
+
+  // Generate the private keys from the signature
+  const { spendingPrivateKey, viewingPrivateKey } =
+    generateKeysFromSignature(signature);
+
+  // Get the spending public key
+  const spendingAccount = privateKeyToAccount(spendingPrivateKey);
+  const spendingPublicKey = spendingAccount.publicKey;
+  // Get the viewing public key
+  const viewingAccount = privateKeyToAccount(viewingPrivateKey);
+  const viewingPublicKey = viewingAccount.publicKey;
+
+  // Check that the public keys are valid
+  if (spendingPublicKey.length !== 132 || viewingPublicKey.length !== 132) {
+    throw new Error("Invalid public key length. Must be 130 hex characters.");
+  }
+
+  // Compress the spending and viewing public keys
+  const compressedSpendingPublicKey = compressPublicKey(spendingPublicKey);
+  const compressedViewingPublicKey = compressPublicKey(viewingPublicKey);
+
+  const stealthMetaAddressWithoutPrefix = compressedSpendingPublicKey.slice(2) + compressedViewingPublicKey.slice(2);
+
+  // Get the stealth meta address
+  const stealthMetaAddress =
+    "st:base:0x" +
+    stealthMetaAddressWithoutPrefix
+
+  // publish to registry smart contract
+  registerKeys({
+    userPrivateKey,
+    schemeId: 1,
+    stealthMetaAddress: stealthMetaAddressWithoutPrefix,
+  }).catch((e) => console.log(e));
+
+  registerKeysOnBehalf({
+    userPrivateKey,
+    registrant: userAddress,
+    schemeId: 1,
+    signature,
+    stealthMetaAddress: stealthMetaAddressWithoutPrefix,
+  }).catch((e) => console.log(e));
+
+  return {
+    spendingPrivateKey,
+    viewingPrivateKey,
+    spendingPublicKey,
+    viewingPublicKey,
+    stealthMetaAddress,
+  };
+}
+
+export async function generateStealthInfo(
+  stealthMetaAddress: `st:base:0x${string}`
+) {
+  if (!stealthMetaAddress.startsWith("st:base:0x")) {
+    throw new Error(
+      "Wrong address format; Address must start with `st:base:0x...`"
+    );
+  }
+
+  const spendPublicKey = ("0x" + stealthMetaAddress.slice(10, 76)) as Hex;
+  const viewPublicKey = ("0x" + stealthMetaAddress.slice(76)) as Hex;
+  console.log('spendPublicKey', spendPublicKey)
+  console.log('stealthMetaAddress', stealthMetaAddress)
+  console.log('viewPublicKey', viewPublicKey)
+
+  // generate random ephemeral private key
+  const ephemeralPrivateKey = toHex(randomPrivateKey());
+  console.log('safesss', viewPublicKey, viewPublicKey)
+  // generate shared secret
+  const sharedSecret = secp.getSharedSecret(
+    ephemeralPrivateKey.replace("0x", ""),
+    viewPublicKey.replace("0x", "")
+  );
+  console.log('safe', sharedSecret)
+
+  const hashedSharedSecret = keccak256(Buffer.from(sharedSecret.slice(2)));
+  console.log('stealthAddressesstealthAddresses', hashedSharedSecret)
+
+  const viewTag = hashedSharedSecret.slice(0, 4);
+
+  // Generate the stealth owner address
+  const { stealthAddresses } = generateStealthAddresses({
+    spendingPublicKeys: [spendPublicKey],
+    ephemeralPrivateKey,
+  });
+  console.log('stealthAddressesstealthAddresses', stealthAddresses)
+
+  // generate ephemeral public key
+  const ephemeralAccount = privateKeyToAccount(ephemeralPrivateKey);
+  const ephemeralPublicKey = ephemeralAccount.publicKey;
+
+  return {
+    stealthMetaAddress,
+    stealthAddress: stealthAddresses[0],
+    ephemeralPublicKey,
+    metadata: viewTag,
+  };
+}
+
+export async function generateStealthPrivate({
+  ephemeralPublicKey,
+  spendingPrivateKey,
+}: {
+  ephemeralPublicKey: Hex | `0x${string}`;
+  spendingPrivateKey: Hex | `0x${string}`;
+}) {
+  // Generate stealth private key from ephemeral public key
+  const { stealthPrivateKey } = generateStealthPrivateKey({
+    spendingPrivateKey,
+    ephemeralPublicKey,
+  });
+
+  const stealthAccount = privateKeyToAccount(stealthPrivateKey);
+  const stealthAddress = stealthAccount.address;
+
+  return {
+    ephemeralPublicKey,
+    stealthPrivateKey,
+    stealthAddress,
+  };
 }
