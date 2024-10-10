@@ -18,9 +18,9 @@ const PortfolioScreen: React.FC = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.logo}>R1ON</Text>
-        <TouchableOpacity style={styles.menuButton}>
+        {/* <TouchableOpacity style={styles.menuButton}>
           <Text style={styles.menuText}>☰</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
 
       <View style={styles.groupPortfolio}>
