@@ -8,6 +8,7 @@ import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED} from '@/config/
 
 import { StealthInfo, Activity } from '@/interface'
 
+const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
 const USDC_TOKEN_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 const DEFAULT_FROM_BLOCK = 16338834n
 
@@ -29,8 +30,33 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
       return Number(block.timestamp) * 1000
     }
 
-    const processTransferLogs = async (logs: any[]) => {
-      if (logs.length > 0) {
+    const processTransferLogs = async (logs: any[], stealthAccount?: StealthInfo) => {
+      if (logs.length > 0 && stealthAccount) {
+        const address = stealthAccount.stealthAddress
+        const transferLog = logs[0]
+        const amountTransferred = transferLog.args.value
+
+        const blockTimestamp = await getBlockTimestamp(transferLog.blockNumber);
+        const date = new Date(blockTimestamp).toISOString();
+
+        const newActivity = {
+          txHash: transferLog.transactionHash,
+          type: 'c',
+          token: USDC_TOKEN_ADDRESS,
+          stealthAddress: address,
+          amount: Number(amountTransferred) / 1e6, // Convert to USDC format,
+          date,
+        }
+
+        const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
+        const _activities: Activity[] = activities ? JSON.parse(activities) : []
+
+        // Store the activity in AsyncStorage
+        await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities.filter(act => act.stealthAddress === address)]))
+
+        console.log('New Activity')
+        console.log(JSON.stringify(newActivity, null, 4))
+      } else if (logs.length > 0) {
         const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED)
         const activeStealthAddress: StealthInfo | null = activatedStealthAddress
           ? JSON.parse(activatedStealthAddress)
@@ -67,7 +93,7 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
         console.log('No matching Transfer events found.')
       }
     }
-    
+
     // Fetch past transfer events
     const fetchPastTransfers = async () => {
       try {
@@ -87,6 +113,40 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
         setError(err instanceof Error ? err : new Error(String(err)))
         setLoading(false)
       }
+    }
+
+    // fetch past tranfer event from collections
+    const fetchAllPastTransfers = async () => {
+      const getUserStealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS)
+
+      const stealthAdresses: StealthInfo[] | null =
+        getUserStealthAddressCollection
+          ? JSON.parse(getUserStealthAddressCollection)
+          : null
+
+      if (!stealthAdresses) return
+
+      const fetchStealthAddressTransfer = stealthAdresses.map(async (stealthAccount) => {
+        try {
+          setLoading(true)
+          const logs = await client.getContractEvents({
+            address: USDC_TOKEN_ADDRESS,
+            abi: erc20Abi,
+            eventName: 'Transfer',
+            args: { to: stealthAccount.stealthAddress },
+            fromBlock: DEFAULT_FROM_BLOCK,
+            strict: true,
+          })
+
+          await processTransferLogs(logs, stealthAccount)
+          setLoading(false)
+        } catch (err) {
+          setError(err instanceof Error ? err : new Error(String(err)))
+          setLoading(false)
+        }
+      })
+
+      await Promise.all(fetchStealthAddressTransfer)
     }
 
     // Watch real-time transfer events
@@ -117,6 +177,7 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
     }
 
     fetchPastTransfers()
+    fetchAllPastTransfers()
     const unwatch = startWatchingTransfers()
 
     // Cleanup when the component unmounts
