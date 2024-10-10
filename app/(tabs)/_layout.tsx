@@ -1,16 +1,44 @@
-import { Tabs } from 'expo-router';
-import React from 'react';
-import { StatusBar, StyleSheet, SafeAreaView  } from 'react-native';
+import React from 'react'
+import { StatusBar, StyleSheet, SafeAreaView } from 'react-native'
+import { NavigationContainer } from '@react-navigation/native'
+import { createDrawerNavigator } from '@react-navigation/drawer'
+import { Tabs } from 'expo-router'
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import CustomDrawerContent from '@/components/drawermenu' 
+import { TabBarIcon } from '@/components/navigation/TabBarIcon' 
+import { Colors } from '@/constants/Colors'
+import { useColorScheme } from '@/hooks/useColorScheme'
+
+export type RootDrawerParamList = {
+  Home: undefined
+}
+
+const Drawer = createDrawerNavigator<RootDrawerParamList>()
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
+  const colorScheme = useColorScheme()
 
   return (
-    <SafeAreaView  style={styles.container}>
+    <NavigationContainer independent>
+      <Drawer.Navigator
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={{
+          drawerStyle: {
+            backgroundColor: '#f0f0f0',
+            width: '100%'          },
+        }}
+      >
+        <Drawer.Screen name="Home" component={TabsNavigator} />
+      </Drawer.Navigator>
+    </NavigationContainer>
+  )
+}
+
+function TabsNavigator() {
+  const colorScheme = useColorScheme()
+
+  return (
+    <SafeAreaView style={styles.container}>
       <Tabs
         screenOptions={{
           tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
@@ -28,7 +56,8 @@ export default function TabLayout() {
             height: 70,
           },
           headerShown: false,
-        }}>
+        }}
+      >
         <Tabs.Screen
           name="home"
           options={{
@@ -43,7 +72,10 @@ export default function TabLayout() {
           options={{
             title: 'Transfer',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'swap-horizontal-outline' : 'swap-horizontal-sharp'} color={color} />
+              <TabBarIcon
+                name={focused ? 'swap-horizontal-outline' : 'swap-horizontal-sharp'}
+                color={color}
+              />
             ),
           }}
         />
@@ -56,24 +88,27 @@ export default function TabLayout() {
             ),
           }}
         />
-         <Tabs.Screen
+        <Tabs.Screen
           name="saving"
           options={{
             title: 'Saving',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'bar-chart-sharp' : 'bar-chart-outline'} color={color} />
+              <TabBarIcon
+                name={focused ? 'bar-chart-sharp' : 'bar-chart-outline'}
+                color={color}
+              />
             ),
           }}
         />
       </Tabs>
-    </SafeAreaView >
-  );
+    </SafeAreaView>
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'flex-end', // Ensures the tab bar is at the bottom
+    justifyContent: 'flex-end',
     backgroundColor: '#fff',
   },
-});
+})
