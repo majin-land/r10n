@@ -7,6 +7,7 @@ import { useQuery } from '@apollo/client'
 
 import { GET_ANNOUNCEMENTS } from '@/apollo/queries/announcements'
 import { generateStealthPrivate } from '@/libs/stealth'
+import { client } from '@/libs/viem'
 
 const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
 
@@ -221,6 +222,9 @@ export const AnnouncementsProvider: React.FC<{
         setLatestBlockNumber(storedLatestBlockNumber)
 
         return storedLatestBlockNumber
+      } else {
+        const blockNumber = await client.getBlockNumber()
+        return String(blockNumber)
       }
     } catch (e) {
       console.error('Failed to retrieve latest block number:', e)

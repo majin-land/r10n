@@ -50,10 +50,10 @@ const WalletScreen: React.FC = () => {
         const storedBlockNumber = await retrieveLatestBlockNumber()
         console.log('Stored block number:', storedBlockNumber)
 
-        if (!storedBlockNumber) {
-          console.warn('Stored block number is null or undefined.')
-          return
-        }
+        // if (!storedBlockNumber) {
+        //   console.warn('Stored block number is null or undefined.')
+        //   return
+        // }
 
         const dataAnnouncements = await refetchAnnouncements(
           storedBlockNumber as string,
@@ -122,7 +122,7 @@ const WalletScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-      {walletAddress ? (
+      {/* {walletAddress ? (
         <View style={styles.walletInfo}>
           <Text style={styles.label}>Wallet Address:</Text>
           <Text style={styles.value}>{walletAddress}</Text>
@@ -137,7 +137,7 @@ const WalletScreen: React.FC = () => {
             <Text style={styles.clearButtonText}>Clear Wallet</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : ( */}
         <View style={styles.connectContainer}>
           <Text style={styles.connectMessage}>No wallet connected</Text>
           <TouchableOpacity
@@ -147,7 +147,7 @@ const WalletScreen: React.FC = () => {
             <Text style={styles.connectButtonText}>Connect Wallet</Text>
           </TouchableOpacity>
         </View>
-      )}
+      {/* )} */}
     </View>
   )
 }
