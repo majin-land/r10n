@@ -304,11 +304,13 @@ const HomeScreen: React.FC = () => {
             >
               <View style={styles.mainWalletbalance}>
                 <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
-                <Text style={styles.balanceText}>
-                  {mainBalanceUsdc || 0} USDC
-                </Text>
+                  <Text style={styles.balanceText}>
+                    {mainBalanceUsdc || 0} USDC
+                  </Text>
               </View>
-              <Text style={styles.text}>{walletAddress}</Text>
+              <TouchableOpacity onPress={() => copyToClipboard(walletAddress as `0x${string}`)}>
+                <Text style={styles.text}>{walletAddress}</Text>
+              </TouchableOpacity>
             </LinearGradient>
             <Text style={styles.label}>Receive</Text>
             <View style={styles.tabWrapper}>
