@@ -71,7 +71,11 @@ const HomeScreen: React.FC = () => {
     null,
   )
   const [initialLoading, setInitialLoading] = useState(false)
-  const { transfers, loading } = useERC20Transfers(stealthAddress)
+  const [stealthAddresses, setStealthAddresses] = useState<StealthInfo[] | []>(
+    [],
+  )
+
+  const { transfers, loading } = useERC20Transfers(stealthAddresses)
 
   // const { loading, transfers } = useERC20Transfers(stealthAddress)
   // console.log(transfers, 'transfers', stealthAddress)
@@ -160,6 +164,8 @@ const HomeScreen: React.FC = () => {
         JSON.stringify(stealthInfo),
       )
 
+      console.log(stealthInfo, 'USE THIS STEALTH ACCOUNT!!!')
+
       // Set the first stealth address
       setStealthAddress(stealthInfo.stealthAddress)
 
@@ -174,16 +180,45 @@ const HomeScreen: React.FC = () => {
   const getActivities = async () => {
     const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
     const _activities: Activity[] = activities ? JSON.parse(activities) : []
-    console.log(JSON.stringify(_activities.map(a => ({txhash: a.txHash, amount: a.amount, address: a.stealthAddress})), null, 4))
+    console.log(
+      JSON.stringify(
+        _activities.map((a) => ({
+          txhash: a.txHash,
+          amount: a.amount,
+          address: a.stealthAddress,
+        })),
+        null,
+        4,
+      ),
+    )
     setActivities(sortActivitiesByDateDesc(_activities))
   }
-  
+
+  const getStealthCollection = async () => {
+    const getUserStealthAddressCollection = await AsyncStorage.getItem(
+      USER_STEALTH_ADDRESS_COLLECTIONS,
+    )
+
+    const stealthAdresses: StealthInfo[] | [] = getUserStealthAddressCollection
+      ? JSON.parse(getUserStealthAddressCollection)
+      : []
+
+    setStealthAddresses(stealthAdresses)
+  }
+
+  useEffect(() => {
+    getStealthCollection()
+  }, [])
+
   useEffect(() => {
     const fetchInitial = async () => {
       setInitialLoading(true)
       try {
-        await Promise.all([fetchMainBalance(), getActivities(), generateInitialStealthAddress()])
-        
+        await Promise.all([
+          fetchMainBalance(),
+          getActivities(),
+          generateInitialStealthAddress(),
+        ])
       } catch (error) {
         console.warn('Error fetch:', error)
       } finally {
@@ -240,12 +275,12 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-       {initialLoading ? (
+      {initialLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#0000ff" />
           <Text>Loading...</Text>
         </View>
-      ): null}
+      ) : null}
       <FlatList
         data={activities}
         contentContainerStyle={styles.activityListContainer}

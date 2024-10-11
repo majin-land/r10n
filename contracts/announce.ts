@@ -92,7 +92,7 @@ export async function watchAnnouncements(
           stealthAddress,
           ephemeralPubKey,
           block_number: newBlockNumber,
-          schemeId,
+          schemeId: schemeId.toString().slice(0, -1),
           metadata,
           transactionHash_: newAnnouncement.transactionHash,
           timestamp_: Date.now(),
@@ -128,6 +128,7 @@ export async function watchAnnouncements(
                 ...currentAnnouncements,
                 newAnnouncementMetadata,
               ]
+              console.log(updatedAnnouncements, 'ANNOUNCEMENT WILL UPDATE')
               await AsyncStorage.setItem(
                 '@announcements',
                 JSON.stringify(updatedAnnouncements),
