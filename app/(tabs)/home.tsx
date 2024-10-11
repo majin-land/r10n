@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   Alert,
   Button,
+  ActivityIndicator,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
@@ -69,7 +70,7 @@ const HomeScreen: React.FC = () => {
   const [stealthAddress, setStealthAddress] = useState<`0x${string}` | null>(
     null,
   )
-
+  const [initialLoading, setInitialLoading] = useState(false)
   const { transfers, loading } = useERC20Transfers(stealthAddress)
 
   // const { loading, transfers } = useERC20Transfers(stealthAddress)
@@ -178,9 +179,18 @@ const HomeScreen: React.FC = () => {
   }
   
   useEffect(() => {
-    getActivities()
-    generateInitialStealthAddress()
-    fetchMainBalance()
+    const fetchInitial = async () => {
+      setInitialLoading(true)
+      try {
+        await Promise.all([fetchMainBalance(), getActivities(), generateInitialStealthAddress()])
+        
+      } catch (error) {
+        console.warn('Error fetch:', error)
+      } finally {
+        setInitialLoading(false)
+      }
+    }
+    fetchInitial()
   }, [transfers])
 
   useEffect(() => {
@@ -189,10 +199,6 @@ const HomeScreen: React.FC = () => {
       stealthMetaAddress as `st:base:0x${string}`,
     )
   }, [spendingPrivateKey, stealthMetaAddress])
-
-  useEffect(() => {
-    fetchMainBalance()
-  }, [walletAddress])
 
   useEffect(() => {
     console.log(announcements, 'Current Announcements in Storage!')
@@ -234,6 +240,12 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
+       {initialLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text>Loading...</Text>
+        </View>
+      ): null}
       <FlatList
         data={activities}
         contentContainerStyle={styles.activityListContainer}
@@ -552,6 +564,17 @@ const styles = StyleSheet.create({
   },
   activityListContainer: {
     paddingBottom: 60,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9999,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
 })
 
