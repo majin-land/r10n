@@ -4,7 +4,7 @@ import { baseSepolia } from 'viem/chains'
 import '@ethersproject/shims' // Polyfill for React Native
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED} from '@/config/storage-key'
+import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED, USER_STEALTH_ADDRESS_COLLECTIONS} from '@/config/storage-key'
 
 import { StealthInfo, Activity } from '@/interface'
 
@@ -41,12 +41,14 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
           const blockTimestamp = await getBlockTimestamp(transferLog.blockNumber);
           const date = new Date(blockTimestamp).toISOString();
 
+          const amount = Number(amountTransferred) / 1e6 // Convert to USDC format
+
           const newActivity = {
             txHash: transferLog.transactionHash,
             type: 'c',
             token: USDC_TOKEN_ADDRESS,
             stealthAddress: targetAddress,
-            amount: Number(amountTransferred) / 1e6, // Convert to USDC format,
+            amount,
             date,
           }
 
@@ -55,6 +57,19 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
 
           // Store the activity in AsyncStorage
           await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities.filter(act => act.stealthAddress)]))
+
+          // update balance
+          const stealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS)
+
+          const _stealthAddressCollection: StealthInfo[] = stealthAddressCollection ? JSON.parse(stealthAddressCollection) : []
+
+          _stealthAddressCollection.map((address) => {
+            address.balance.set('usdc', amount)
+        
+            return {
+              ...address,
+            }
+          })
 
           // Clean up the active stealth address if needed
           await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED)

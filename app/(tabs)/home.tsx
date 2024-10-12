@@ -150,7 +150,7 @@ const HomeScreen: React.FC = () => {
       // Store new stealthInfo to AsyncStorage
       await AsyncStorage.setItem(
         USER_STEALTH_ADDRESS_COLLECTIONS,
-        JSON.stringify([...(stealthAdresses || []), stealthInfo]),
+        JSON.stringify([...(stealthAdresses || []), { ...stealthInfo, balance: { usdc: 0 } }]),
       )
 
       await AsyncStorage.setItem(

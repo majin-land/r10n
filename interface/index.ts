@@ -3,6 +3,7 @@ export interface StealthInfo {
   stealthAddress: `0x${string}`
   ephemeralPublicKey: `0x${string}`
   metadata: string
+  balance: Map<string, number>
 }
   
 export interface Activity {
