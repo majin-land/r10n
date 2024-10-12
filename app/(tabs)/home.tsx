@@ -279,7 +279,7 @@ const HomeScreen: React.FC = () => {
         data={activities}
         contentContainerStyle={styles.activityListContainer}
         renderItem={renderActivity}
-        keyExtractor={(item, index) => item.txHash + item.date}
+        keyExtractor={(item, index) => item.txHash + item.date + index}
         refreshing={isRefreshing}
         onRefresh={async () => {
           Promise.all([
