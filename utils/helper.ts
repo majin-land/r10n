@@ -3,6 +3,13 @@ import * as secp from "@noble/secp256k1";
 
 import { TOKEN } from '@/config/token'
 import { Activity } from "@/interface";
+import { createPublicClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+
+const client = createPublicClient({
+  chain: baseSepolia,
+  transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
+})
 
 // export function randomPrivateKey() {
 //   const randomWallet = ethers.Wallet.createRandom();
@@ -70,4 +77,9 @@ export const sortActivitiesByDateDesc = (activities: Activity[]): Activity[] => 
   return activities.sort((a, b) => {
     return new Date(b.date).getTime() - new Date(a.date).getTime()
   })
+}
+
+export const getBlockTimestamp = async (blockNumber: bigint) => {
+  const block = await client.getBlock({ blockNumber });
+  return Number(block.timestamp) * 1000
 }
