@@ -19,6 +19,9 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
   const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
+    console.log('targetAddress', targetAddress)
+    if (!targetAddress) return
+
     const client = createPublicClient({
       chain: baseSepolia,
       transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
@@ -40,23 +43,6 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
 
         if (activeStealthAddress) {
           const transferLog = logs[0]
-          const amountTransferred = transferLog.args.value
-
-          const blockTimestamp = await getBlockTimestamp(
-            transferLog.blockNumber,
-          )
-          const date = new Date(blockTimestamp).toISOString()
-
-          const amount = Number(amountTransferred) / 1e6 // Convert to USDC format
-
-          const newActivity = {
-            txHash: transferLog.transactionHash,
-            type: 'c',
-            token: usdcTokenAddress,
-            stealthAddress: targetAddress,
-            amount,
-            date,
-          }
 
           const activities = await AsyncStorage.getItem(
             ACTIVITY_STEALTH_ADDRESS,
@@ -65,37 +51,69 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
             ? JSON.parse(activities)
             : []
 
-          // Store the activity in AsyncStorage
-          await AsyncStorage.setItem(
-            ACTIVITY_STEALTH_ADDRESS,
-            JSON.stringify([
-              newActivity,
-              ..._activities.filter((act) => act.stealthAddress),
-            ]),
+          const activityExist = _activities.some(
+            (a) => a.txHash == transferLog.transactionHash,
           )
 
-          // update balance
-          const stealthAddressCollection = await AsyncStorage.getItem(
-            USER_STEALTH_ADDRESS_COLLECTIONS,
-          )
+          if (!activityExist) {
+            const amountTransferred = transferLog.args.value
 
-          const _stealthAddressCollection: StealthInfo[] =
-            stealthAddressCollection ? JSON.parse(stealthAddressCollection) : []
+            const blockTimestamp = await getBlockTimestamp(
+              transferLog.blockNumber,
+            )
+            const date = new Date(blockTimestamp).toISOString()
 
-          _stealthAddressCollection.map((address) => {
-            if (address.stealthAddress === targetAddress) {
-              address.balance.set('usdc', amount)
+            const amount = Number(amountTransferred) / 1e6 // Convert to USDC format
+
+            const newActivity = {
+              txHash: transferLog.transactionHash,
+              type: 'c',
+              token: usdcTokenAddress,
+              stealthAddress: targetAddress,
+              amount,
+              date,
             }
+            console.log('New Activity')
+            console.log(JSON.stringify(newActivity, null, 4))
 
-            return {
-              ...address,
-            }
-          })
+            // Store the activity in AsyncStorage
+            await AsyncStorage.setItem(
+              ACTIVITY_STEALTH_ADDRESS,
+              JSON.stringify([
+                newActivity,
+                ..._activities.filter((act) => act.stealthAddress),
+              ]),
+            )
 
-          // Clean up the active stealth address if needed
-          await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED)
-          console.log('New Activity')
-          console.log(JSON.stringify(newActivity, null, 4))
+            // update balance
+            const stealthAddressCollection = await AsyncStorage.getItem(
+              USER_STEALTH_ADDRESS_COLLECTIONS,
+            )
+
+            const _stealthAddressCollection: StealthInfo[] =
+              stealthAddressCollection
+                ? JSON.parse(stealthAddressCollection)
+                : []
+
+            const newCollection = _stealthAddressCollection.map((address) => {
+              if (address.stealthAddress === targetAddress) {
+                const _amount = address.balance[usdcTokenAddress]
+                address.balance[usdcTokenAddress] = _amount + amount
+              }
+              return address
+            })
+
+            console.log('newCollection', newCollection)
+
+            // Store the activity in AsyncStorage
+            await AsyncStorage.setItem(
+              USER_STEALTH_ADDRESS_COLLECTIONS,
+              JSON.stringify(newCollection),
+            )
+
+            // Clean up the active stealth address if needed
+            await AsyncStorage.removeItem(USER_STEALTH_ADDRESS_ACTIVED)
+          }
         }
       } else {
         console.log('No matching Transfer events found.')

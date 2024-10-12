@@ -52,8 +52,8 @@ export async function watchAnnouncements(
   spendingPrivateKey: Hex | string,
   stealthMetaAddress: `st:base:0x${string}`,
 ) {
-  let balance = 0
   if (!spendingPrivateKey) return
+  const balance: Record<string, number> = { [usdcTokenAddress]: 0 }
 
   const watch = client.watchContractEvent({
     address: announceContractAdddress,
@@ -88,6 +88,7 @@ export async function watchAnnouncements(
         }
 
         const { stealthAddress, ephemeralPubKey, schemeId, metadata } =
+          // @ts-expect-error
           newAnnouncement.args
         const newAnnouncementMetadata = {
           stealthAddress,
@@ -170,7 +171,7 @@ export async function watchAnnouncements(
                   }
 
                   // update balance value = amountTransferred
-                  balance = Number(amountTransferred) / 1e6
+                  balance[usdcTokenAddress] = Number(amountTransferred) / 1e6
 
                   const activities = await AsyncStorage.getItem(
                     ACTIVITY_STEALTH_ADDRESS,

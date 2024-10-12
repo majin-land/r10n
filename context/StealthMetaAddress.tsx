@@ -149,6 +149,7 @@ export const StealthMetaAddressProvider: React.FC<{
     }
 
   const fetchStealthWalletBalance = async () => {
+    console.log('fetchStealthWalletBalance')
     const getUserStealthAddressCollection = await AsyncStorage.getItem(
       USER_STEALTH_ADDRESS_COLLECTIONS,
     )
@@ -157,11 +158,16 @@ export const StealthMetaAddressProvider: React.FC<{
       ? JSON.parse(getUserStealthAddressCollection)
       : []
 
+    console.log('stealthAddresses', stealthAddresses)
+
     // Calculate total balance directly from StealthInfo balance
     const totalBalance = stealthAddresses.reduce((total, address) => {
-      const usdcBalance = address?.balance?.get(usdcTokenAddress) || 0
+      console.log('totalBalance', address.stealthAddress, address.balance)
+      if (!address || !address.balance) return total
+      const usdcBalance = address.balance[usdcTokenAddress] || 0
       return total + usdcBalance
     }, 0)
+    console.log('totalBalance', totalBalance)
 
     return totalBalance
   }

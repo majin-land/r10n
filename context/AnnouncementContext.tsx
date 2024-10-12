@@ -80,8 +80,7 @@ export const AnnouncementsProvider: React.FC<{
     spendingPrivateKey: Hex | string,
     stealthMetaAddress: `st:base:0x${string}`,
   ): Promise<void> => {
-    const balance: Map<string, number> = new Map<string, number>()
-    balance.set(usdcTokenAddress, 0)
+    const balance: Record<string, number> = { [usdcTokenAddress]: 0 }
 
     if (!spendingPrivateKey) {
       console.error('Spending private key is missing or invalid.')
@@ -176,7 +175,7 @@ export const AnnouncementsProvider: React.FC<{
                   }
 
                   // update balance value = amountTransferred
-                  balance.set(usdcTokenAddress, Number(amountTransferred) / 1e6)
+                  balance[usdcTokenAddress] = Number(amountTransferred) / 1e6
 
                   const activities = await AsyncStorage.getItem(
                     ACTIVITY_STEALTH_ADDRESS,
@@ -280,10 +279,8 @@ export const AnnouncementsProvider: React.FC<{
       const storedLatestBlockNumber = await AsyncStorage.getItem(
         'latestBlockNumber',
       )
-
       if (storedLatestBlockNumber) {
         setLatestBlockNumber(storedLatestBlockNumber)
-
         return storedLatestBlockNumber
       } else {
         const blockNumber = await client.getBlockNumber()

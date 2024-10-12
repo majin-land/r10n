@@ -137,23 +137,20 @@ const HomeScreen: React.FC = () => {
         setStealthAddress(activeStealthAdress.stealthAddress)
         return
       }
+
       // If no stealth addresses, generate new stealthInfo
       const stealthInfo = await generateStealthInfo(
         stealthMetaAddress as `st:base:0x${string}`,
       )
 
-      const stealthAdresses: StealthInfo[] | null =
-        getUserStealthAddressCollection
-          ? JSON.parse(getUserStealthAddressCollection)
-          : null
+      const stealthAdresses: StealthInfo[] = getUserStealthAddressCollection
+        ? JSON.parse(getUserStealthAddressCollection)
+        : []
 
       // Store new stealthInfo to AsyncStorage
       await AsyncStorage.setItem(
         USER_STEALTH_ADDRESS_COLLECTIONS,
-        JSON.stringify([
-          ...(stealthAdresses || []),
-          { ...stealthInfo, balance: { [usdcTokenAddress]: 0 } },
-        ]),
+        JSON.stringify([...stealthAdresses, stealthInfo]),
       )
 
       await AsyncStorage.setItem(
