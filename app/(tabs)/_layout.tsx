@@ -99,6 +99,18 @@ function TabsNavigator() {
             ),
           }}
         />
+         <Tabs.Screen
+          name="balance"
+          options={{
+            title: 'Balance',
+            tabBarIcon: ({ color, focused }) => (
+              <TabBarIcon
+                name={focused ? 'options' : 'options-outline'}
+                color={color}
+              />
+            ),
+          }}
+        />
       </Tabs>
     </SafeAreaView>
   )

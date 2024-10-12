@@ -83,7 +83,9 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
             stealthAddressCollection ? JSON.parse(stealthAddressCollection) : []
 
           _stealthAddressCollection.map((address) => {
-            address.balance.set('usdc', amount)
+            if (address.stealthAddress === targetAddress) {
+              address.balance.set('usdc', amount)
+            }
 
             return {
               ...address,
