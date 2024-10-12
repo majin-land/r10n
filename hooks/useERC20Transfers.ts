@@ -11,7 +11,7 @@ import { StealthInfo, Activity } from '@/interface'
 const USDC_TOKEN_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 const DEFAULT_FROM_BLOCK = 16338834n
 
-const useERC20Transfers = (stealthAddresses: StealthInfo[] | []) => {
+const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
   const [transfers, setTransfers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -27,9 +27,14 @@ const useERC20Transfers = (stealthAddresses: StealthInfo[] | []) => {
       return Number(block.timestamp) * 1000
     }
 
-    const processTransferLogs = async (logs: any[], stealthAccount: StealthInfo) => {
+    const processTransferLogs = async (logs: any[]) => {
       if (logs.length > 0) {
-        if (stealthAccount) {
+        const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED)
+        const activeStealthAddress: StealthInfo | null = activatedStealthAddress
+          ? JSON.parse(activatedStealthAddress)
+          : null
+
+        if (activeStealthAddress) {
           const transferLog = logs[0]
           const amountTransferred = transferLog.args.value
 
@@ -40,7 +45,7 @@ const useERC20Transfers = (stealthAddresses: StealthInfo[] | []) => {
             txHash: transferLog.transactionHash,
             type: 'c',
             token: USDC_TOKEN_ADDRESS,
-            stealthAddress: stealthAccount.stealthAddress,
+            stealthAddress: targetAddress,
             amount: Number(amountTransferred) / 1e6, // Convert to USDC format,
             date,
           }
@@ -60,69 +65,63 @@ const useERC20Transfers = (stealthAddresses: StealthInfo[] | []) => {
         console.log('No matching Transfer events found.')
       }
     }
-
+    
     // Fetch past transfer events
     const fetchPastTransfers = async () => {
-      const fetchAll = stealthAddresses.map(async (stealthAccount: StealthInfo) => {
-        try {
-          setLoading(true)
-          const logs = await client.getContractEvents({
-            address: USDC_TOKEN_ADDRESS,
-            abi: erc20Abi,
-            eventName: 'Transfer',
-            args: { to: stealthAccount.stealthAddress },
-            fromBlock: DEFAULT_FROM_BLOCK,
-            strict: true,
-          })
-
-          await processTransferLogs(logs, stealthAccount)
-          setLoading(false)
-        } catch (err) {
-          setError(err instanceof Error ? err : new Error(String(err)))
-          setLoading(false)
-        }
-      })
-
-      await Promise.all(fetchAll)
-    }
-
-    // Watch real-time transfer events
-    const startWatchingTransfers = async () => {
-      await Promise.all(stealthAddresses.map((stealthAccount: StealthInfo) => {
-        const unwatch = client.watchContractEvent({
+      try {
+        setLoading(true)
+        const logs = await client.getContractEvents({
           address: USDC_TOKEN_ADDRESS,
           abi: erc20Abi,
           eventName: 'Transfer',
-          args: { to: stealthAccount.stealthAddress },
-          onLogs: async (logs) => {
-            await processTransferLogs(logs, stealthAccount)
-            logs.forEach((log) => {
-              const newTransfer = {
-                from: log.args.from,
-                to: log.args.to,
-                value: Number(log.args.value) / 1e6, // Convert to human-readable format
-                blockNumber: log.blockNumber,
-              }
-              setTransfers((prevTransfers) => [newTransfer, ...prevTransfers])
-            })
-          },
-          onError: (err) => {
-            setError(err instanceof Error ? err : new Error(String(err)))
-          },
+          args: { to: targetAddress },
+          fromBlock: DEFAULT_FROM_BLOCK,
+          strict: true,
         })
 
-        return unwatch // Return unwatch function for cleanup
-      }))
+        await processTransferLogs(logs)
+        setLoading(false)
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)))
+        setLoading(false)
+      }
+    }
+
+    // Watch real-time transfer events
+    const startWatchingTransfers = () => {
+      const unwatch = client.watchContractEvent({
+        address: USDC_TOKEN_ADDRESS,
+        abi: erc20Abi,
+        eventName: 'Transfer',
+        args: { to: targetAddress },
+        onLogs: async (logs) => {
+          await processTransferLogs(logs)
+          logs.forEach((log) => {
+            const newTransfer = {
+              from: log.args.from,
+              to: log.args.to,
+              value: Number(log.args.value) / 1e6, // Convert to human-readable format
+              blockNumber: log.blockNumber,
+            }
+            setTransfers((prevTransfers) => [newTransfer, ...prevTransfers])
+          })
+        },
+        onError: (err) => {
+          setError(err instanceof Error ? err : new Error(String(err)))
+        },
+      })
+
+      return unwatch // Return unwatch function for cleanup
     }
 
     fetchPastTransfers()
-    // const unwatch = startWatchingTransfers()
+    const unwatch = startWatchingTransfers()
 
     // Cleanup when the component unmounts
     return () => {
-      startWatchingTransfers()
+      unwatch()
     }
-  }, [stealthAddresses])
+  }, [targetAddress])
 
   return { transfers, loading, error }
 }

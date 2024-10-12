@@ -45,16 +45,10 @@ import {
   USER_STEALTH_ADDRESS_ACTIVED,
   USER_STEALTH_ADDRESS_COLLECTIONS,
 } from '@/config/storage-key'
-import { Activity } from '@/interface'
+import { Activity, StealthInfo } from '@/interface'
 
 // Updated activities data
 
-interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`
-  stealthAddress: `0x${string}`
-  ephemeralPublicKey: `0x${string}`
-  metadata: string
-}
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress, clearWallet } = useWallet()
@@ -75,7 +69,7 @@ const HomeScreen: React.FC = () => {
     [],
   )
 
-  const { transfers, loading } = useERC20Transfers(stealthAddresses)
+  const { transfers, loading } = useERC20Transfers(stealthAddress)
 
   // const { loading, transfers } = useERC20Transfers(stealthAddress)
   // console.log(transfers, 'transfers', stealthAddress)
