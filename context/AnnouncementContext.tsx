@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState } from 'react'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { generateStealthPrivateKey } from '@fluidkey/stealth-account-kit'
-import { privateKeyToAccount } from 'viem/accounts'
 import { erc20Abi, Hex } from 'viem'
 import { useQuery } from '@apollo/client'
 
@@ -10,10 +8,11 @@ import { generateStealthPrivate } from '@/libs/stealth'
 import { client } from '@/libs/viem'
 import { usdcTokenAddress } from '@/config/smart-contract-address'
 import { getBlockTimestamp } from '@/utils/helper'
-import { ACTIVITY_STEALTH_ADDRESS } from '@/config/storage-key'
-import { Activity } from '@/interface'
-
-const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+import {
+  ACTIVITY_STEALTH_ADDRESS,
+  USER_STEALTH_ADDRESS_COLLECTIONS,
+} from '@/config/storage-key'
+import { Activity, StealthInfo } from '@/interface'
 
 // Define the types
 type announcementsCredentials = {
@@ -37,14 +36,6 @@ interface AnnouncementsContextType {
   refetchAnnouncements: (
     block_number: string,
   ) => Promise<announcementsCredentials[]>
-}
-
-interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`
-  stealthAddress: `0x${string}`
-  ephemeralPublicKey: `0x${string}`
-  metadata: string
-  balance?: number
 }
 
 const AnnouncementsContext = createContext<
@@ -89,7 +80,9 @@ export const AnnouncementsProvider: React.FC<{
     spendingPrivateKey: Hex | string,
     stealthMetaAddress: `st:base:0x${string}`,
   ): Promise<void> => {
-    let balance = 0
+    const balance: Map<string, number> = new Map<string, number>()
+    balance.set(usdcTokenAddress, 0)
+
     if (!spendingPrivateKey) {
       console.error('Spending private key is missing or invalid.')
       return
@@ -183,7 +176,7 @@ export const AnnouncementsProvider: React.FC<{
                   }
 
                   // update balance value = amountTransferred
-                  balance = Number(amountTransferred) / 1e6
+                  balance.set(usdcTokenAddress, Number(amountTransferred) / 1e6)
 
                   const activities = await AsyncStorage.getItem(
                     ACTIVITY_STEALTH_ADDRESS,

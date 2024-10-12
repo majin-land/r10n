@@ -1,17 +1,9 @@
 import React, { createContext, useContext, useState } from 'react'
-import * as SecureStore from 'expo-secure-store'
-import { generateStealthMetaAddress } from '@/libs/stealth'
-import { getUsdcBalance } from '@/libs/viem'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`
-  stealthAddress: `0x${string}`
-  ephemeralPublicKey: `0x${string}`
-  metadata: string
-  balance: Map<string, number>
-}
-const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
+import { StealthInfo } from '@/interface'
+import { USER_STEALTH_ADDRESS_COLLECTIONS } from '@/config/storage-key'
+import { usdcTokenAddress } from '@/config/smart-contract-address'
 
 // Define the types
 type stealthMetaAddressCredentials = {
@@ -164,13 +156,13 @@ export const StealthMetaAddressProvider: React.FC<{
     const stealthAddresses: StealthInfo[] = getUserStealthAddressCollection
       ? JSON.parse(getUserStealthAddressCollection)
       : []
-  
+
     // Calculate total balance directly from StealthInfo balance
     const totalBalance = stealthAddresses.reduce((total, address) => {
-      const usdcBalance = address?.balance?.get('usdc') || 0
-      return total + usdcBalance;
+      const usdcBalance = address?.balance?.get(usdcTokenAddress) || 0
+      return total + usdcBalance
     }, 0)
-  
+
     return totalBalance
   }
 

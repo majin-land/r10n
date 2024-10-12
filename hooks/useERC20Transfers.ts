@@ -4,12 +4,14 @@ import { baseSepolia } from 'viem/chains'
 import '@ethersproject/shims' // Polyfill for React Native
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
-import { ACTIVITY_STEALTH_ADDRESS, USER_STEALTH_ADDRESS_ACTIVED, USER_STEALTH_ADDRESS_COLLECTIONS} from '@/config/storage-key'
-
+import {
+  ACTIVITY_STEALTH_ADDRESS,
+  USER_STEALTH_ADDRESS_ACTIVED,
+  USER_STEALTH_ADDRESS_COLLECTIONS,
+} from '@/config/storage-key'
+import { usdcTokenAddress } from '@/config/smart-contract-address'
+import { DEFAULT_FROM_BLOCK } from '@/config/token'
 import { StealthInfo, Activity } from '@/interface'
-
-const USDC_TOKEN_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
-const DEFAULT_FROM_BLOCK = 16338834n
 
 const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
   const [transfers, setTransfers] = useState<any[]>([])
@@ -23,13 +25,15 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
     })
 
     const getBlockTimestamp = async (blockNumber: bigint) => {
-      const block = await client.getBlock({ blockNumber });
+      const block = await client.getBlock({ blockNumber })
       return Number(block.timestamp) * 1000
     }
 
     const processTransferLogs = async (logs: any[]) => {
       if (logs.length > 0) {
-        const activatedStealthAddress = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_ACTIVED)
+        const activatedStealthAddress = await AsyncStorage.getItem(
+          USER_STEALTH_ADDRESS_ACTIVED,
+        )
         const activeStealthAddress: StealthInfo | null = activatedStealthAddress
           ? JSON.parse(activatedStealthAddress)
           : null
@@ -38,36 +42,51 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
           const transferLog = logs[0]
           const amountTransferred = transferLog.args.value
 
-          const blockTimestamp = await getBlockTimestamp(transferLog.blockNumber);
-          const date = new Date(blockTimestamp).toISOString();
+          const blockTimestamp = await getBlockTimestamp(
+            transferLog.blockNumber,
+          )
+          const date = new Date(blockTimestamp).toISOString()
 
           const amount = Number(amountTransferred) / 1e6 // Convert to USDC format
 
           const newActivity = {
             txHash: transferLog.transactionHash,
             type: 'c',
-            token: USDC_TOKEN_ADDRESS,
+            token: usdcTokenAddress,
             stealthAddress: targetAddress,
             amount,
             date,
           }
 
-          const activities = await AsyncStorage.getItem(ACTIVITY_STEALTH_ADDRESS)
-          const _activities: Activity[] = activities ? JSON.parse(activities) : []
+          const activities = await AsyncStorage.getItem(
+            ACTIVITY_STEALTH_ADDRESS,
+          )
+          const _activities: Activity[] = activities
+            ? JSON.parse(activities)
+            : []
 
           // Store the activity in AsyncStorage
-          await AsyncStorage.setItem(ACTIVITY_STEALTH_ADDRESS, JSON.stringify([newActivity, ..._activities.filter(act => act.stealthAddress)]))
+          await AsyncStorage.setItem(
+            ACTIVITY_STEALTH_ADDRESS,
+            JSON.stringify([
+              newActivity,
+              ..._activities.filter((act) => act.stealthAddress),
+            ]),
+          )
 
           // update balance
-          const stealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS)
+          const stealthAddressCollection = await AsyncStorage.getItem(
+            USER_STEALTH_ADDRESS_COLLECTIONS,
+          )
 
-          const _stealthAddressCollection: StealthInfo[] = stealthAddressCollection ? JSON.parse(stealthAddressCollection) : []
+          const _stealthAddressCollection: StealthInfo[] =
+            stealthAddressCollection ? JSON.parse(stealthAddressCollection) : []
 
           _stealthAddressCollection.map((address) => {
             if (address.stealthAddress === targetAddress) {
               address.balance.set('usdc', amount)
             }
-        
+
             return {
               ...address,
             }
@@ -82,13 +101,13 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
         console.log('No matching Transfer events found.')
       }
     }
-    
+
     // Fetch past transfer events
     const fetchPastTransfers = async () => {
       try {
         setLoading(true)
         const logs = await client.getContractEvents({
-          address: USDC_TOKEN_ADDRESS,
+          address: usdcTokenAddress,
           abi: erc20Abi,
           eventName: 'Transfer',
           args: { to: targetAddress },
@@ -107,7 +126,7 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
     // Watch real-time transfer events
     const startWatchingTransfers = () => {
       const unwatch = client.watchContractEvent({
-        address: USDC_TOKEN_ADDRESS,
+        address: usdcTokenAddress,
         abi: erc20Abi,
         eventName: 'Transfer',
         args: { to: targetAddress },

@@ -1,26 +1,22 @@
-import { createWalletClient, createPublicClient, custom, http, Hex, erc20Abi } from 'viem'
+import { createWalletClient, http, Hex, erc20Abi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { baseSepolia } from 'viem/chains'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
+import {
+  announceContractAdddress,
+  usdcTokenAddress,
+} from '@/config/smart-contract-address'
+import {
+  ACTIVITY_STEALTH_ADDRESS,
+  USER_STEALTH_ADDRESS_COLLECTIONS,
+} from '@/config/storage-key'
+import { Activity, StealthInfo } from '@/interface'
+import { generateStealthPrivate } from '@/libs/stealth'
 import { client } from '@/libs/viem'
-import { announceContractAdddress, usdcTokenAddress } from '@/config/smart-contract-address'
+import { getBlockTimestamp } from '@/utils/helper'
 
 import ERC5564AnnouncerABI from './abi/ERC5564AnnouncerABI'
-import { generateStealthPrivate } from '@/libs/stealth'
-import { getBlockTimestamp } from '@/utils/helper'
-import { ACTIVITY_STEALTH_ADDRESS } from '@/config/storage-key'
-import { Activity } from '@/interface'
-
-const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
-
-interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`
-  stealthAddress: `0x${string}`
-  ephemeralPublicKey: `0x${string}`
-  metadata: string
-  balance?: number
-}
 
 export async function announce({
   userPrivateKey,
@@ -38,7 +34,7 @@ export async function announce({
   const walletClient = createWalletClient({
     account: privateKeyToAccount(userPrivateKey),
     chain: baseSepolia,
-    transport: http(),
+    transport: http(process.env.EXPO_PUBLIC_BASE_RPC_URL),
   })
 
   const hash = await walletClient.writeContract({
