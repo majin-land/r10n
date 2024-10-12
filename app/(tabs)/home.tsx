@@ -40,6 +40,7 @@ import { useAnnouncements } from '@/context/AnnouncementContext'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import useERC20Transfers from '@/hooks/useERC20Transfers'
 
+import { usdcTokenAddress } from '@/config/smart-contract-address'
 import {
   ACTIVITY_STEALTH_ADDRESS,
   USER_STEALTH_ADDRESS_ACTIVED,
@@ -48,7 +49,6 @@ import {
 import { Activity, StealthInfo } from '@/interface'
 
 // Updated activities data
-
 
 const HomeScreen: React.FC = () => {
   const { privateKey, walletAddress, clearWallet } = useWallet()
@@ -150,7 +150,10 @@ const HomeScreen: React.FC = () => {
       // Store new stealthInfo to AsyncStorage
       await AsyncStorage.setItem(
         USER_STEALTH_ADDRESS_COLLECTIONS,
-        JSON.stringify([...(stealthAdresses || []), { ...stealthInfo, balance: { usdc: 0 } }]),
+        JSON.stringify([
+          ...(stealthAdresses || []),
+          { ...stealthInfo, balance: { [usdcTokenAddress]: 0 } },
+        ]),
       )
 
       await AsyncStorage.setItem(
@@ -258,7 +261,7 @@ const HomeScreen: React.FC = () => {
         <View style={styles.details}>
           <Text style={styles.detailsText}>
             {item.type === 'd' ? 'You sent' : 'You received'} {item.amount}{' '}
-            {item.token}
+            {getTokenSymbol(item.token)} ({item.token})
           </Text>
         </View>
       )}
@@ -298,11 +301,13 @@ const HomeScreen: React.FC = () => {
             >
               <View style={styles.mainWalletbalance}>
                 <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
-                  <Text style={styles.balanceText}>
-                    {mainBalanceUsdc || 0} USDC
-                  </Text>
+                <Text style={styles.balanceText}>
+                  {mainBalanceUsdc || 0} USDC
+                </Text>
               </View>
-              <TouchableOpacity onPress={() => copyToClipboard(walletAddress as `0x${string}`)}>
+              <TouchableOpacity
+                onPress={() => copyToClipboard(walletAddress as `0x${string}`)}
+              >
                 <Text style={styles.text}>{walletAddress}</Text>
               </TouchableOpacity>
             </LinearGradient>
