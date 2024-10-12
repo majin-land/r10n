@@ -1,13 +1,16 @@
-import { createWalletClient, createPublicClient, custom, http, Hex } from 'viem'
+import { createWalletClient, createPublicClient, custom, http, Hex, erc20Abi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { baseSepolia } from 'viem/chains'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 import { client } from '@/libs/viem'
-import { announceContractAdddress } from '@/config/smart-contract-address'
+import { announceContractAdddress, usdcTokenAddress } from '@/config/smart-contract-address'
 
 import ERC5564AnnouncerABI from './abi/ERC5564AnnouncerABI'
 import { generateStealthPrivate } from '@/libs/stealth'
+import { getBlockTimestamp } from '@/utils/helper'
+import { ACTIVITY_STEALTH_ADDRESS } from '@/config/storage-key'
+import { Activity } from '@/interface'
 
 const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
 
@@ -16,6 +19,7 @@ interface StealthInfo {
   stealthAddress: `0x${string}`
   ephemeralPublicKey: `0x${string}`
   metadata: string
+  balance?: number
 }
 
 export async function announce({
@@ -52,6 +56,7 @@ export async function watchAnnouncements(
   spendingPrivateKey: Hex | string,
   stealthMetaAddress: `st:base:0x${string}`,
 ) {
+  let balance = 0
   if (!spendingPrivateKey) return
 
   const watch = client.watchContractEvent({
@@ -140,13 +145,75 @@ export async function watchAnnouncements(
                   : null
 
               // TODO: check stealth address USDC balance and put into StealthInfo
-              // call getUsdcBalance
+              // get transfer events from erc20transfer, check there are available activity token in the stealth address
+              try {
+                const logs = await client.getContractEvents({
+                  address: usdcTokenAddress,
+                  abi: erc20Abi,
+                  eventName: 'Transfer',
+                  args: { to: stealthAddress },
+                  strict: true,
+                })
+
+                if (logs.length > 0) {
+                  const transferLog = logs[0]
+                  const amountTransferred = transferLog.args.value
+
+                  const blockTimestamp = await getBlockTimestamp(
+                    transferLog.blockNumber,
+                  )
+                  const date = new Date(blockTimestamp).toISOString()
+
+                  const newActivity = {
+                    txHash: transferLog.transactionHash,
+                    type: 'c',
+                    token: usdcTokenAddress,
+                    stealthAddress: stealthAddress,
+                    amount: Number(amountTransferred) / 1e6, // Convert to USDC format,
+                    date,
+                  }
+
+                  // update balance value = amountTransferred
+                  balance = Number(amountTransferred) / 1e6
+
+                  const activities = await AsyncStorage.getItem(
+                    ACTIVITY_STEALTH_ADDRESS,
+                  )
+                  const _activities: Activity[] = activities
+                    ? JSON.parse(activities)
+                    : []
+
+                  // check if there's no activity exist with the same tx hash
+                  if (
+                    !_activities.some(
+                      (activity) =>
+                        activity.txHash === transferLog.transactionHash,
+                    )
+                  ) {
+                    // then Store the activity in AsyncStorage
+                    await AsyncStorage.setItem(
+                      ACTIVITY_STEALTH_ADDRESS,
+                      JSON.stringify([
+                        newActivity,
+                        ..._activities.filter((act) => act.stealthAddress),
+                      ]),
+                    )
+                    console.log('New Activity')
+                    console.log(JSON.stringify(newActivity, null, 4))
+                  }
+                } else {
+                  console.log('No matching Transfer events found.')
+                }
+              } catch (e) {
+                console.error('Failed to get transfer events from announce:', e)
+              }
 
               const stealthAnnouncementInfo: StealthInfo = {
                 stealthMetaAddress,
                 stealthAddress: stealthAddress as Hex,
                 ephemeralPublicKey: ephemeralPubKey as Hex,
                 metadata,
+                balance,
               }
 
               // check this announcement's stealth address is not exist on stealth address collection
