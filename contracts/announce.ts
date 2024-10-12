@@ -58,7 +58,7 @@ export async function watchAnnouncements(
     address: announceContractAdddress,
     abi: ERC5564AnnouncerABI,
     eventName: 'Announcement',
-    pollingInterval: 1_000,
+    pollingInterval: 100_000,
     onError: (error) => console.log(error),
     onLogs: async (logs) => {
       const newAnnouncement = logs[0]
@@ -138,6 +138,9 @@ export async function watchAnnouncements(
                 getUserStealthAddressCollection
                   ? JSON.parse(getUserStealthAddressCollection)
                   : null
+
+              // TODO: check stealth address USDC balance and put into StealthInfo
+              // call getUsdcBalance
 
               const stealthAnnouncementInfo: StealthInfo = {
                 stealthMetaAddress,

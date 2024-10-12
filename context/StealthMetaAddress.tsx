@@ -1,16 +1,15 @@
-import React, { createContext, useContext, useState } from "react";
-import * as SecureStore from "expo-secure-store";
-import {
-  generateStealthMetaAddress,
-} from "@/libs/stealth";
-import { getUsdcBalance } from "@/libs/viem";
+import React, { createContext, useContext, useState } from 'react'
+import * as SecureStore from 'expo-secure-store'
+import { generateStealthMetaAddress } from '@/libs/stealth'
+import { getUsdcBalance } from '@/libs/viem'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 
 interface StealthInfo {
-  stealthMetaAddress: `st:base:0x${string}`;
-  stealthAddress: `0x${string}`;
-  ephemeralPublicKey: `0x${string}`;
-  metadata: string;
+  stealthMetaAddress: `st:base:0x${string}`
+  stealthAddress: `0x${string}`
+  ephemeralPublicKey: `0x${string}`
+  metadata: string
+  balance: Map<string, number>
 }
 const USER_STEALTH_ADDRESS_COLLECTIONS = 'USER_STEALTH_ADDRESS_COLLECTIONS'
 
@@ -158,14 +157,22 @@ export const StealthMetaAddressProvider: React.FC<{
     }
 
   const fetchStealthWalletBalance = async () => {
-    const getUserStealthAddressCollection = await AsyncStorage.getItem(USER_STEALTH_ADDRESS_COLLECTIONS);
+    const getUserStealthAddressCollection = await AsyncStorage.getItem(
+      USER_STEALTH_ADDRESS_COLLECTIONS,
+    )
     const stealthAdresses: StealthInfo[] = getUserStealthAddressCollection
-        ? JSON.parse(getUserStealthAddressCollection)
-        : [];
+      ? JSON.parse(getUserStealthAddressCollection)
+      : []
 
-    const balances = await Promise.all(stealthAdresses.map(annoucement => getUsdcBalance(annoucement.stealthAddress as `0x${string}`)))
+    // TODO: just calculate from StealthInfo balance (dont call getUsdcBalance)
 
-    const countBalances = balances.reduce((cr, ac) => cr + ac , 0)
+    const balances = await Promise.all(
+      stealthAdresses.map((annoucement) =>
+        getUsdcBalance(annoucement.stealthAddress as `0x${string}`),
+      ),
+    )
+
+    const countBalances = balances.reduce((cr, ac) => cr + ac, 0)
 
     return countBalances
   }
