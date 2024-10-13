@@ -7,6 +7,8 @@ export interface StealthInfo {
 }
 
 export interface Activity {
+  from: string
+  to: string
   txHash: string // Transaction hash as a string
   type: 'c' | 'd' // Define the type as either 'c' (credit) or 'd' (debit) if there are only two possible values
   token: string // Token address as a string (e.g., USDC token address)

@@ -1,12 +1,4 @@
 import 'react-native-get-random-values'
-
-import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
-import {
-  formatDate,
-  formatStealthMetaAddress,
-  getTokenSymbol,
-  sortActivitiesByDateDesc,
-} from '@/utils/helper'
 import React, { useEffect, useState } from 'react'
 import {
   View,
@@ -15,38 +7,36 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  Button,
   ActivityIndicator,
 } from 'react-native'
 import * as Clipboard from 'expo-clipboard'
 import { useQuery } from '@apollo/client'
-import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets'
-import { generateStealthInfo } from '@/libs/stealth'
-import { useWallet } from '@/context/WalletContext'
 import { useRouter } from 'expo-router'
-import {
-  client,
-  getUsdcBalance,
-  getUserBalance,
-  transferUsdc,
-} from '@/libs/viem'
-import { decodeEventLog, erc20Abi, formatEther, parseAbiItem } from 'viem'
+import { formatEther, Hex } from 'viem'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Hex } from 'viem'
-import { SafeAreaView } from 'react-native-safe-area-context'
-
-import { watchAnnouncements } from '@/contracts'
-import { useAnnouncements } from '@/context/AnnouncementContext'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import useERC20Transfers from '@/hooks/useERC20Transfers'
 
-import { usdcTokenAddress } from '@/config/smart-contract-address'
 import {
   ACTIVITY_STEALTH_ADDRESS,
   USER_STEALTH_ADDRESS_ACTIVED,
   USER_STEALTH_ADDRESS_COLLECTIONS,
 } from '@/config/storage-key'
+import { useAnnouncements } from '@/context/AnnouncementContext'
+import { useStealthMetaAddress } from '@/context/StealthMetaAddress'
+import { useWallet } from '@/context/WalletContext'
+import { watchAnnouncements } from '@/contracts'
+import useERC20Transfers from '@/hooks/useERC20Transfers'
 import { Activity, StealthInfo } from '@/interface'
+import { GET_STEALTH_META_ADDRESS_SETS } from '@/apollo/queries/stealthMetaAddressSets'
+import { generateStealthInfo } from '@/libs/stealth'
+import { getUsdcBalance, getUserBalance, transferUsdc } from '@/libs/viem'
+import {
+  formatDate,
+  formatStealthAddress,
+  formatStealthMetaAddress,
+  getTokenSymbol,
+  sortActivitiesByDateDesc,
+} from '@/utils/helper'
 
 // Updated activities data
 
@@ -71,8 +61,6 @@ const HomeScreen: React.FC = () => {
 
   const { transfers, loading } = useERC20Transfers(stealthAddress)
 
-  // const { loading, transfers } = useERC20Transfers(stealthAddress)
-  // console.log(transfers, 'transfers', stealthAddress)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [mainBalance, setMainBalance] = useState<string>()
   const [mainBalanceUsdc, setMainBalanceUsdc] = useState<string>()
@@ -258,14 +246,16 @@ const HomeScreen: React.FC = () => {
         <View style={styles.details}>
           <Text style={styles.detailsText}>
             {item.type === 'd' ? 'You sent' : 'You received'} {item.amount}{' '}
-            {getTokenSymbol(item.token)} ({item.token})
+            {getTokenSymbol(item.token)}
+          </Text>
+          <Text style={styles.detailsText}>
+            {item.type === 'd' ? 'To:' : 'From:'}{' '}
+            {item.type === 'd' ? item.to : item.from}
           </Text>
         </View>
       )}
     </View>
   )
-
-  console.log(stealthAddress, 'stealthAddressstealthAddress')
 
   return (
     <View style={styles.container}>
@@ -290,13 +280,27 @@ const HomeScreen: React.FC = () => {
         }}
         ListHeaderComponent={
           <>
-            <Text style={styles.header}>R1ON</Text>
-            <Text style={styles.label}>Main Wallet</Text>
             <LinearGradient
-              colors={['#4ca1af', '#c4e0e5']}
+              colors={['#4ca1af', '#8cc1cf']}
               style={styles.balanceCard}
             >
-              <View style={styles.mainWalletbalance}>
+              <Text
+                style={{
+                  fontSize: 18,
+                  fontWeight: '600',
+                  marginBottom: 10,
+                  color: '#ffffff',
+                }}
+              >
+                Main Wallet
+              </Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginBottom: 8,
+                }}
+              >
                 <Text style={styles.balanceText}>{mainBalance || 0} ETH</Text>
                 <Text style={styles.balanceText}>
                   {mainBalanceUsdc || 0} USDC
@@ -305,7 +309,9 @@ const HomeScreen: React.FC = () => {
               <TouchableOpacity
                 onPress={() => copyToClipboard(walletAddress as `0x${string}`)}
               >
-                <Text style={styles.text}>{walletAddress}</Text>
+                <Text style={styles.balanceText}>
+                  {formatStealthAddress(walletAddress)}
+                </Text>
               </TouchableOpacity>
             </LinearGradient>
             <Text style={styles.label}>Receive</Text>
@@ -344,29 +350,33 @@ const HomeScreen: React.FC = () => {
                   </Text>
                 </TouchableOpacity>
               </View>
-              {selectedTab === 'meta' ? (
-                <View style={styles.addressContainer}>
-                  <Text style={styles.address}>
-                    {formatStealthMetaAddress(stealthMetaAddress || '')}
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => copyToClipboard(stealthMetaAddress || '')}
-                  >
-                    <Text style={styles.copyButtonText}>Copy</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View style={styles.addressContainer}>
-                  <Text style={styles.address}>{stealthAddress}</Text>
-                  <TouchableOpacity
-                    style={styles.copyButton}
-                    onPress={() => copyToClipboard(stealthAddress || '')}
-                  >
-                    <Text style={styles.copyButtonText}>Copy</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
+              <View style={{ padding: 10 }}>
+                {selectedTab === 'meta' ? (
+                  <View style={styles.addressContainer}>
+                    <Text style={styles.address}>
+                      {formatStealthMetaAddress(stealthMetaAddress || '')}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={() => copyToClipboard(stealthMetaAddress || '')}
+                    >
+                      <Text style={styles.copyButtonText}>Copy</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.addressContainer}>
+                    <Text style={styles.address}>
+                      {formatStealthAddress(stealthAddress)}
+                    </Text>
+                    <TouchableOpacity
+                      style={styles.copyButton}
+                      onPress={() => copyToClipboard(stealthAddress || '')}
+                    >
+                      <Text style={styles.copyButtonText}>Copy</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
             <LinearGradient
               colors={['#4ca1af', '#007AFF']}
@@ -377,13 +387,13 @@ const HomeScreen: React.FC = () => {
                 {userBalanceUsdc || 0} USDC
               </Text>
             </LinearGradient>
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={styles.clearButton}
               onPress={() => clearWallet().then(() => router.replace('/'))}
             >
               <Text style={styles.clearButtonText}>Reset keys</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </TouchableOpacity> */}
+            {/* <TouchableOpacity
               style={[styles.successButton, loading && styles.disabledButton]}
               disabled={loading}
               onPress={() =>
@@ -399,7 +409,7 @@ const HomeScreen: React.FC = () => {
               <Text style={styles.clearButtonText}>
                 Transfer from main to stealh Address
               </Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
             <Text style={styles.activitiesLabel}>Activities</Text>
           </>
         }
@@ -430,7 +440,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#007AFF', // Border color
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 10,
     backgroundColor: '#E3F2FD', // Light blue background
   },
@@ -440,9 +450,11 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   copyButton: {
-    paddingVertical: 5,
-    paddingHorizontal: 15,
-    borderRadius: 5,
+    marginVertical: -10,
+    marginRight: -10,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 8,
     backgroundColor: '#007AFF', // Button color
   },
   copyButtonText: {
@@ -451,7 +463,7 @@ const styles = StyleSheet.create({
   balanceContainer: {
     marginVertical: 20,
     padding: 20,
-    borderRadius: 10,
+    borderRadius: 8,
     backgroundColor:
       'linear-gradient(90deg, rgba(23,115,250,1) 0%, rgba(250,181,181,1) 35%)',
     color: '#FFFFFF',
@@ -474,7 +486,7 @@ const styles = StyleSheet.create({
   activityContainer: {
     marginBottom: 15,
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -518,10 +530,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
   },
-  resetButton: {
-    marginTop: 16,
-    marginBottom: 16,
-  },
   clearButton: {
     backgroundColor: '#FF5252',
     paddingVertical: 10,
@@ -544,7 +552,6 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: 'row',
-    marginBottom: 20,
   },
   tabButton: {
     flex: 1,
@@ -562,7 +569,6 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: '#000',
-    textDecorationLine: 'underline',
     fontWeight: 'bold',
   },
   addressContainer: {
@@ -570,26 +576,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#007AFF',
-    borderRadius: 10,
+    borderRadius: 8,
     padding: 10,
     backgroundColor: '#E3F2FD',
   },
   tabWrapper: {
     backgroundColor: '#fff',
-    padding: 4,
   },
   text: {
     fontSize: 16,
     color: '#7f8c8d',
   },
   balanceCard: {
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 20,
-  },
-  mainWalletbalance: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 8,
   },
   disabledButton: {
     backgroundColor: '#6c757d',

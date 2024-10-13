@@ -66,9 +66,11 @@ const useERC20Transfers = (targetAddress: `0x${string}` | null) => {
             const amount = Number(amountTransferred) / 1e6 // Convert to USDC format
 
             const newActivity = {
+              from: transferLog.args.from,
+              to: transferLog.args.to,
               txHash: transferLog.transactionHash,
               type: 'c',
-              token: usdcTokenAddress,
+              token: transferLog.address,
               stealthAddress: targetAddress,
               amount,
               date,

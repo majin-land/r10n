@@ -4,13 +4,13 @@ import { NavigationContainer } from '@react-navigation/native'
 import { createDrawerNavigator } from '@react-navigation/drawer'
 import { Tabs } from 'expo-router'
 
-import CustomDrawerContent from '@/components/drawermenu' 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon' 
+import CustomDrawerContent from '@/components/drawermenu'
+import { TabBarIcon } from '@/components/navigation/TabBarIcon'
 import { Colors } from '@/constants/Colors'
 import { useColorScheme } from '@/hooks/useColorScheme'
 
 export type RootDrawerParamList = {
-  R10n: undefined
+  R10N: undefined
 }
 
 const Drawer = createDrawerNavigator<RootDrawerParamList>()
@@ -25,10 +25,11 @@ export default function TabLayout() {
         screenOptions={{
           drawerStyle: {
             backgroundColor: '#f0f0f0',
-            width: '100%'          },
+            width: '100%',
+          },
         }}
       >
-        <Drawer.Screen name="R10n" component={TabsNavigator} />
+        <Drawer.Screen name="R10N" component={TabsNavigator} />
       </Drawer.Navigator>
     </NavigationContainer>
   )
@@ -62,7 +63,10 @@ function TabsNavigator() {
           options={{
             title: 'Home',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
+              <TabBarIcon
+                name={focused ? 'home' : 'home-outline'}
+                color={color}
+              />
             ),
           }}
         />
@@ -72,7 +76,9 @@ function TabsNavigator() {
             title: 'Transfer',
             tabBarIcon: ({ color, focused }) => (
               <TabBarIcon
-                name={focused ? 'swap-horizontal-outline' : 'swap-horizontal-sharp'}
+                name={
+                  focused ? 'swap-horizontal-outline' : 'swap-horizontal-sharp'
+                }
                 color={color}
               />
             ),
@@ -83,7 +89,10 @@ function TabsNavigator() {
           options={{
             title: 'Activity',
             tabBarIcon: ({ color, focused }) => (
-              <TabBarIcon name={focused ? 'timer-outline' : 'timer-sharp'} color={color} />
+              <TabBarIcon
+                name={focused ? 'timer-outline' : 'timer-sharp'}
+                color={color}
+              />
             ),
           }}
         />
@@ -99,7 +108,7 @@ function TabsNavigator() {
             ),
           }}
         />
-         <Tabs.Screen
+        <Tabs.Screen
           name="balance"
           options={{
             title: 'Balance',
