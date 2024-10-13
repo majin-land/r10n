@@ -1,5 +1,6 @@
 {
   "expo": {
+    "owner": "majindev",
     "name": "r10n",
     "slug": "r10n",
     "version": "1.0.0",
@@ -19,7 +20,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "land.majin.r10n"
     },
     "web": {
       "bundler": "metro",
@@ -32,6 +34,11 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "58a4adf9-eb54-4c03-a46b-987d5a069d3c"
+      }
     }
   }
 }
